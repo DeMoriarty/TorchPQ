@@ -1,7 +1,7 @@
 from distutils.core import setup
 setup(
-  name = 'TorchPQ',
-  packages = ['TorchPQ'],
+  name = 'torchpq',
+  packages = ['torchpq'],
   version = '0.1',
   license='MIT',
   description = 'Efficient implementations of Product Quantization and its variants',
