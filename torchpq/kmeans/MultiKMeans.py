@@ -45,7 +45,7 @@ class MultiKMeans(nn.Module):
     n_redo=1,
     max_iter=100,
     tol=1e-4,
-    mode="euclidean",
+    distance="euclidean",
     init_mode="random",
     verbose=0,
     sm_size=48*256*4,
@@ -56,7 +56,7 @@ class MultiKMeans(nn.Module):
     self.max_iter = max_iter
     self.tol = tol
     self.verbose = verbose
-    self.mode = mode
+    self.distance = distance
     self.init_mode = init_mode
     self.sm_size = sm_size
     self.arange = None
@@ -75,9 +75,9 @@ class MultiKMeans(nn.Module):
         sm_size=sm_size,
       )
 
-      if mode in ["euclidean", "manhattan"]:
-        distance = mode
-      elif mode in ["cosine"]:
+      if distance in ["euclidean", "manhattan"]:
+        distance = distance
+      elif distance in ["cosine"]:
         distance = "inner"
       self.max_sim_cuda = MaxSimCUDA(
         distance=distance,
@@ -180,9 +180,9 @@ class MultiKMeans(nn.Module):
       b: torch.Tensor, shape : [l, d, n]
       returns: torch.Tensor, shape : [l, m, n]
     """
-    if self.mode == "euclidean":
+    if self.distance == "euclidean":
       return self.euc_sim(a, b, inplace=inplace)
-    elif self.mode == "cosine":
+    elif self.distance == "cosine":
       return self.cos_sim(a, b, inplace=inplace, normalize=normalize)
 
   ### Need more testing:
@@ -193,7 +193,7 @@ class MultiKMeans(nn.Module):
       returns: torch.Tensor, shape : [l, d_vector, n_clusters]
     """
     l, d_vector, n_data = data.shape
-    if self.mode == "cosine":
+    if self.distance == "cosine":
       data_norm = data.norm(dim=-2, keepdim=True) + 1e-8
       data.div_(data_norm)
     centroids = torch.zeros(l, d_vector, self.n_clusters, device=data.device, dtype=data.dtype)
@@ -205,12 +205,12 @@ class MultiKMeans(nn.Module):
         sims = self.sim(data, current_centroids ) #[l,m,n]
         max_sims_v, max_sims_i = sims.max(dim=-1) #[l,m]
       elif data.device.type == "cuda":
-        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=2, mode="tn")
+        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=2, distance="tn")
       index = max_sims_v.argmin(dim=-1) #[l]
       arange = torch.arange(l, device=device)
       new_centroid = data[arange, :, index] #[l, d_vector]
       centroids[:, :, i] = new_centroid
-    if self.mode == "cosine":
+    if self.distance == "cosine":
       data.mul_(data_norm)
     return centroids
 
@@ -250,9 +250,9 @@ class MultiKMeans(nn.Module):
 
     remaining = self.remaining_memory(data.device)# - 1024*3
 
-    if self.mode == "euclidean":
+    if self.distance == "euclidean":
       required = l*(m*n + max(m, n) + m*d + n*d) * data.element_size()
-    elif self.mode == "cosine":
+    elif self.distance == "cosine":
       required = l*((m*n) + (m+n)*(d+1)) * data.element_size()
     if remaining >= required:
       sims = self.sim(data, centroids, inplace=False) #[l, m, n]
@@ -260,13 +260,13 @@ class MultiKMeans(nn.Module):
       return (maxsims, labels)
     else:
       if data.device.type == "cuda":
-        if self.mode == "cosine":
+        if self.distance == "cosine":
           d_norm = data.norm(dim=-2, keepdim=True) + 1e-8
           c_norm = centroids.norm(dim=-2, keepdim=True) + 1e-8
           data.div_(d_norm)
           centroids.div_(c_norm)
-        maxsims, labels = self.max_sim_cuda(data, centroids, dim=2, mode="tn")
-        if self.mode == "cosine":
+        maxsims, labels = self.max_sim_cuda(data, centroids, dim=2, distance="tn")
+        if self.distance == "cosine":
           data.mul_(d_norm)
           centroids.mul_(c_norm)
       elif data.device.type == "cpu":
@@ -274,9 +274,9 @@ class MultiKMeans(nn.Module):
         n_partitions = 1
         for i in range(16):
           sub_m = math.ceil(m / n_partitions)
-          if self.mode == "euclidean":
+          if self.distance == "euclidean":
             required = l*(sub_m*n + max(sub_m, n)) * data.element_size() + m*8 # +sub_m*d*4
-          elif self.mode == "cosine":
+          elif self.distance == "cosine":
             required = l*(sub_m*n + sub_m+n) * data.element_size() + m*8# +sub_m*d*4
           # print("required, remaining, n_p", required / 1024**3, remaining / 1024**3, n_partitions)
           if self.does_it_fit(required // 4, device=data.device, dtype=torch.float):

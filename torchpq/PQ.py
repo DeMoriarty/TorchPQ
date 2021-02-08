@@ -9,7 +9,7 @@ class PQ(nn.Module):
       d_vector,
       n_subvectors=8,
       n_clusters=256,
-      mode="euclidean",
+      distance="euclidean",
       verbose=0
     ):
     super(PQ, self).__init__()
@@ -20,11 +20,11 @@ class PQ(nn.Module):
     assert d_vector % n_subvectors == 0
 
     self.d_subvector = d_vector // n_subvectors
-    self.mode = mode
+    self.distance = distance
     
     self.kmeans = MultiKMeans(
       n_clusters = n_clusters,
-      mode = mode,
+      distance = distance,
       max_iter = 25,
       verbose = verbose,
     )

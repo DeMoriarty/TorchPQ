@@ -91,7 +91,7 @@ class IVFPQ(IVFPQBase):
     self.coarse_q = KMeans(
       max_iter=25,
       n_clusters=n_cq_clusters,
-      mode="inner" if distance == "cosine" else distance,
+      distance="inner" if distance == "cosine" else distance,
       init_mode="random",
       verbose=verbose,
     )
@@ -99,7 +99,7 @@ class IVFPQ(IVFPQBase):
       d_vector=d_vector,
       n_subvectors=n_subvectors,
       n_clusters=n_pq_clusters,
-      mode="inner" if distance == "cosine" else distance,
+      distance="inner" if distance == "cosine" else distance,
       verbose=verbose,
     )
 

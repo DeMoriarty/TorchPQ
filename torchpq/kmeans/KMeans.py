@@ -280,7 +280,6 @@ class KMeans(nn.Module):
             break
           n_partitions *= 2
         sub_m = math.ceil(m / n_partitions)
-        print("n_partitions", n_partitions, "sub_m", sub_m)
         maxsims = torch.zeros(m, device=data.device, dtype=torch.float)
         labels = torch.zeros(m, device=data.device, dtype=torch.long)
         for i in range(n_partitions):
