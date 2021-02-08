@@ -79,3 +79,4 @@ __global__ void compute_centroids(
       }
     }
   }
+}
