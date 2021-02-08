@@ -12,7 +12,7 @@ class MaxSimCUDA(CustomKernel):
     self.k = k
     self.dim = dim
     self.distance = distance
-    with open(get_absolute_path("kernels\\MaxSimKernel.cu"),'r') as f:
+    with open(get_absolute_path("kernels","MaxSimKernel.cu"),'r') as f:
       self.kernel = f.read()
 
     if distance in ["euclidean", "l2"]:
