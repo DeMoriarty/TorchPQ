@@ -16,7 +16,7 @@ class GetIOACUDA(CustomKernel):
 
     self._use_torch_in_cupy_malloc()
     self.stream = Stream(torch.cuda.current_stream().cuda_stream)
-    with open(get_absolute_path("GetIOAKernel.cu"), "r") as f:
+    with open(get_absolute_path("kernels\\GetIOAKernel.cu"), "r") as f:
       self.kernel = f.read()
     kernel = (self.kernel
       .replace("_TPB_", str(tpb))

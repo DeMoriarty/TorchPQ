@@ -21,7 +21,7 @@ class ComputeProductCUDA(CustomKernel):
     self._use_torch_in_cupy_malloc()
     self.stream = Stream(torch.cuda.current_stream().cuda_stream)
 
-    with open(get_absolute_path("ComputeProductKernel.cu"), "r") as f:
+    with open(get_absolute_path("kernels\\ComputeProductKernel.cu"), "r") as f:
       self.kernel = f.read()
     
     cb1 = [f"      float Bval{i} = Bsh[(i * _NCS_ + {i}) * _K_ + int(Avals.d{i}) ];" for i in range(n_cs)]

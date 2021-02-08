@@ -16,7 +16,7 @@ class GetWriteAddressCUDA(CustomKernel):
 
     self._use_torch_in_cupy_malloc()
     self.stream = Stream(torch.cuda.current_stream().cuda_stream)
-    with open(get_absolute_path("GetWriteAddressKernel.cu"), "r") as f:
+    with open(get_absolute_path("kernels\\GetWriteAddressKernel.cu"), "r") as f:
       self.kernel = f.read()
       
     kernel = (self.kernel
