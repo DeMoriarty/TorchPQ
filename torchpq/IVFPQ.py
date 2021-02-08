@@ -1,9 +1,9 @@
 import torch
 import numpy as np
 
-from torchpq import IVFPQBase
-from torchpq import IVFPQTopk
-from torchpq import PQ
+from .IVFPQBase import IVFPQBase
+from .IVFPQTopk import IVFPQTopk
+from .PQ import PQ
 from .kmeans import KMeans
 
 class IVFPQ(IVFPQBase):

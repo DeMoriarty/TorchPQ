@@ -2,7 +2,7 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from torchpq.kernels.CustomKernel import CustomKernel, Stream
+from .CustomKernel import CustomKernel, Stream
 from torchpq.util import get_absolute_path
 
 class ComputeCentroidsCUDA(CustomKernel):
