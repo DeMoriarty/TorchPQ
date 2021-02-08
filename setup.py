@@ -13,7 +13,6 @@ setup(
   install_requires=[ 
           'numpy',
           'torch',
-          'cupy>=7.4.0'
       ],
   classifiers=[
     'Development Status :: 3 - Alpha',
