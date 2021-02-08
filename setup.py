@@ -1,20 +1,19 @@
-from distutils.core import setup
-from setuptools import find_packages
+from setuptools import setup, find_packages
 setup(
   name = 'torchpq',
   packages = find_packages(),
-  version = '0.1.3.7',
+  version = '0.1.3.8',
   license='MIT',
   description = 'Efficient implementations of Product Quantization and its variants',
   author = 'demoriarty', 
   author_email = 'sahbanjan@gmail.com',
   url = 'https://github.com/DeMoriarty/TorchPQ',
-  download_url = 'https://github.com/DeMoriarty/TorchPQ/archive/v_0137.tar.gz',
+  download_url = 'https://github.com/DeMoriarty/TorchPQ/archive/v_0138.tar.gz',
   keywords = ['KMeans', 'K-means', 'ANN', 'pytorch','machine learning', 'pq', 'product quantization', 'IVFPQ', 'approximate nearest neighbors'],
   install_requires=[ 
-          'numpy',
-          'torch',
-      ],
+    'numpy',
+    'torch',
+  ],
   classifiers=[
     'Development Status :: 3 - Alpha',
     'Intended Audience :: Developers',
@@ -27,4 +26,5 @@ setup(
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
   ],
+  include_package_data = True,
 )

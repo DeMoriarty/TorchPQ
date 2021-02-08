@@ -1,0 +1,2 @@
+include torchpq/kernels/*.cu
+include torchpq/kmeans/kernels/*.cu
