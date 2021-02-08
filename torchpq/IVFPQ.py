@@ -88,6 +88,7 @@ class IVFPQ(IVFPQBase):
       distance=distance,
       device=device
     )
+
     self.coarse_q = KMeans(
       max_iter=25,
       n_clusters=n_cq_clusters,

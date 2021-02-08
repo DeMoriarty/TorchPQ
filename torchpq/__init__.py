@@ -1,9 +1,11 @@
 from . import kmeans
 from . import kernels
+
 from .IVFPQBase import IVFPQBase
+from .PQ import PQ
+
 from .IVFPQ import IVFPQ
 from .IVFPQR import IVFPQR
-from .PQ import PQ
 
 try:
   import cupy
