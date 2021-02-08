@@ -1,10 +1,10 @@
 import torch
 import numpy as np
 
-from IVFPQBase import IVFPQBase
-from IVFPQTopk import IVFPQTopk
-from kmeans import KMeans
-from PQ import PQ
+from torchpq import IVFPQBase
+from torchpq import IVFPQTopk
+from torchpq import PQ
+from torchpq.kmeans import KMeans
 
 class IVFPQ(IVFPQBase):
   def __init__(

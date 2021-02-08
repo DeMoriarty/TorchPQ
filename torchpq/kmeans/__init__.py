@@ -1,2 +1,2 @@
-from KMeans import KMeans
-from MultiKMeans import MultiKMeans
+from torchpq.kmeans.KMeans import KMeans
+from torchpq.kmeans.MultiKMeans import MultiKMeans

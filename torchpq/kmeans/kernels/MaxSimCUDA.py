@@ -2,7 +2,7 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-import CustomKernel from CustomKernel
+import torchpq.kernels.CustomKernel from CustomKernel
 
 class MaxSimCUDA(CustomKernel): 
   def __init__(self, m=None, n=None, k=None, dim=None, distance="euclidean"):

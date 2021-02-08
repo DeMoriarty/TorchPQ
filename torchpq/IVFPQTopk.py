@@ -1,4 +1,4 @@
-from kernels import ComputeProductCUDA
+from torchpq.kernels import ComputeProductCUDA
 
 class IVFPQ_Topk:
   def __init__(self,

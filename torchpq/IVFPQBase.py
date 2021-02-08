@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from kernels import GetAddressOfIDCUDA
-from kernels import GetDivOfAddressCUDA
-from kernels import GetIOACUDA
-from kernels import GetWriteAddressCUDA
+from torchpq.kernels import GetAddressOfIDCUDA
+from torchpq.kernels import GetDivOfAddressCUDA
+from torchpq.kernels import GetIOACUDA
+from torchpq.kernels import GetWriteAddressCUDA
 
 class IVFPQBase(nn.Module):
   def __init__(

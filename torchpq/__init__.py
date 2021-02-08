@@ -1,7 +1,7 @@
-from IVFPQBase import IVFPQBase
-from IVFPQ import IVFPQ
-from IVFPQR import IVFPQR
-from PQ import PQ
+from torchpq.IVFPQBase import IVFPQBase
+from torchpq.IVFPQ import IVFPQ
+from torchpq.IVFPQR import IVFPQR
+from torchpq.PQ import PQ
 try:
   import cupy
 except ModuleNotFoundError:

@@ -2,7 +2,7 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-import CustomKernel from CustomKernel
+import torchpq.kernels.CustomKernel from CustomKernel
 
 class GetAddressOfIDCUDA(CustomKernel):
   def __init__(
