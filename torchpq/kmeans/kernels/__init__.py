@@ -1,2 +1,2 @@
-from torchpq.kmeans.kernels.ComputeCentroidsCUDA import ComputeCentroidsCUDA
-from torchpq.kmeans.kernels.MaxSimCUDA import MaxSimCUDA
+from .ComputeCentroidsCUDA import ComputeCentroidsCUDA
+from .MaxSimCUDA import MaxSimCUDA
