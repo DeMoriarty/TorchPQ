@@ -2,7 +2,7 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel
+from .CustomKernel import CustomKernel, Stream
 
 class ComputeProductCUDA(CustomKernel):
   def __init__(
