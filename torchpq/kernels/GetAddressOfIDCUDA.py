@@ -3,6 +3,7 @@ import cupy as cp
 import numpy as np
 import math
 from .CustomKernel import CustomKernel, Stream
+from torchpq.util import get_absolute_path
 
 class GetAddressOfIDCUDA(CustomKernel):
   def __init__(
@@ -16,7 +17,7 @@ class GetAddressOfIDCUDA(CustomKernel):
     self._use_torch_in_cupy_malloc()
     self.stream = Stream(torch.cuda.current_stream().cuda_stream)
 
-    with open("GetAddressOfIDKernel.cu", "r") as f:
+    with open(get_absolute_path("GetAddressOfIDKernel.cu"), "r") as f:
       self.kernel = f.read()
     kernel = (self.kernel
       .replace("_TPB_", str(tpb))

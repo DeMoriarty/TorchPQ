@@ -3,6 +3,7 @@ import cupy as cp
 import numpy as np
 import math
 from torchpq.kernels.CustomKernel import CustomKernel, Stream
+from torchpq.util import get_absolute_path
 
 class MaxSimCUDA(CustomKernel): 
   def __init__(self, m=None, n=None, k=None, dim=None, distance="euclidean"):
@@ -11,7 +12,7 @@ class MaxSimCUDA(CustomKernel):
     self.k = k
     self.dim = dim
     self.distance = distance
-    with open("./MaxSimKernel.cu",'r') as f:
+    with open(get_absolute_path("MaxSimKernel.cu"),'r') as f:
       self.kernel = f.read()
 
     if distance in ["euclidean", "l2"]:
