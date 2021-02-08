@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
-from torchpq.kmeans.kernels import MaxSimCUDA
-from torchpq.kmeans.kernels import ComputeCentroidsCUDA
+
+from .kernels import MaxSimCUDA
+from .kernels import ComputeCentroidsCUDA
 
 class MultiKMeans(nn.Module):
   """

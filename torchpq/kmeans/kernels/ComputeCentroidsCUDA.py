@@ -2,7 +2,7 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-import torchpq.kernels.CustomKernel from CustomKernel
+from torchpq.kernels.CustomKernel import CustomKernel
 
 class ComputeCentroidsCUDA(CustomKernel):
   def __init__(

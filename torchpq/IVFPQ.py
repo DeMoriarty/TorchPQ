@@ -4,7 +4,7 @@ import numpy as np
 from torchpq import IVFPQBase
 from torchpq import IVFPQTopk
 from torchpq import PQ
-from torchpq.kmeans import KMeans
+from .kmeans import KMeans
 
 class IVFPQ(IVFPQBase):
   def __init__(

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from torchpq.kmeans import MultiKMeans
+from .kmeans import MultiKMeans
 
 class PQ(nn.Module):
   def __init__(
