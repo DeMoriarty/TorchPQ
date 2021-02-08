@@ -10,10 +10,10 @@ setup(
   url = 'https://github.com/DeMoriarty/TorchPQ',
   download_url = 'https://github.com/DeMoriarty/TorchPQ/archive/v_01.tar.gz',
   keywords = ['KMeans', 'K-means', 'ANN', 'pytorch','machine learning', 'pq', 'product quantization', 'IVFPQ', 'approximate nearest neighbors'],
-  install_requires=[            # I get to this in a second
+  install_requires=[ 
           'numpy',
           'torch',
-          'cupy'
+          'cupy>=7.4.0'
       ],
   classifiers=[
     'Development Status :: 3 - Alpha',
