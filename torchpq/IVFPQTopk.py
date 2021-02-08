@@ -1,6 +1,6 @@
 from .kernels import ComputeProductCUDA
 
-class IVFPQ_Topk:
+class IVFPQTopk:
   def __init__(self,
     n_subvectors,
     n_clusters,
