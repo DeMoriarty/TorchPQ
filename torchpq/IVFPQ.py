@@ -67,6 +67,7 @@ class IVFPQ(IVFPQBase):
     self.d_vector = d_vector
     self.d_subvector = d_vector // n_subvectors
     self.n_pq_clusters = n_pq_clusters
+    self.n_subvectors = n_subvectors
     
     cc = self.get_cc() #compute capability
     if cc[0] < 7 or cc == (7, 2):
