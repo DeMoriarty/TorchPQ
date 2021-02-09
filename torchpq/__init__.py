@@ -12,6 +12,7 @@ from . import kmeans
 from . import kernels
 
 from .IVFPQBase import IVFPQBase
+from .IVFPQTopk import IVFPQTopk
 from .PQ import PQ
 
 from .IVFPQ import IVFPQ

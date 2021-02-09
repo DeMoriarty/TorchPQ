@@ -206,7 +206,7 @@ class MultiKMeans(nn.Module):
         sims = self.sim(data, current_centroids ) #[l,m,n]
         max_sims_v, max_sims_i = sims.max(dim=-1) #[l,m]
       elif data.device.type == "cuda":
-        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=2, distance="tn")
+        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=2, mode="tn")
       index = max_sims_v.argmin(dim=-1) #[l]
       arange = torch.arange(l, device=device)
       new_centroid = data[arange, :, index] #[l, d_vector]
@@ -266,7 +266,7 @@ class MultiKMeans(nn.Module):
           c_norm = centroids.norm(dim=-2, keepdim=True) + 1e-8
           data.div_(d_norm)
           centroids.div_(c_norm)
-        maxsims, labels = self.max_sim_cuda(data, centroids, dim=2, distance="tn")
+        maxsims, labels = self.max_sim_cuda(data, centroids, dim=2, mode="tn")
         if self.distance == "cosine":
           data.mul_(d_norm)
           centroids.mul_(c_norm)

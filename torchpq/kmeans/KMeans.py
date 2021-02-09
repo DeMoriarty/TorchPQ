@@ -206,7 +206,7 @@ class KMeans(nn.Module):
         sims = self.sim(data, current_centroids )
         max_sims_v, max_sims_i = sims.max(dim=1)
       elif data.device.type == "cuda":
-        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=1, distance="tn")
+        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=1, mode="tn")
       index = max_sims_v.argmin(dim=0)
       new_centroid = data[:, index]
       centroids[:, i] = new_centroid
@@ -264,7 +264,7 @@ class KMeans(nn.Module):
           c_norm = centroids.norm(dim=0, keepdim=True) + 1e-8
           data.div_(d_norm)
           centroids.div_(c_norm)
-        maxsims, labels = self.max_sim_cuda(data, centroids, dim=1, distance="tn")
+        maxsims, labels = self.max_sim_cuda(data, centroids, dim=1, mode="tn")
         if self.distance == "cosine":
           data.mul_(d_norm)
           centroids.mul_(c_norm)
