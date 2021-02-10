@@ -388,7 +388,7 @@ class KMeans(nn.Module):
   def predict(self, query):
     """
       Predict closest cluster center each sample in query belongs to.
-      query: torch.Tensor, shape : [n_query, d_vector]
+      query: torch.Tensor, shape : [d_vector, n_query]
     """
     assert self.centroids is not None, "kmeans is not trained"
     _, labels = self.get_labels(query, self.centroids)
@@ -397,7 +397,7 @@ class KMeans(nn.Module):
   def topk(self, query, k):
     """
       Predict the top-k closest cluster centers of each sample in query
-      query: torch.Tensor, shape : [n_query, d_vector]
+      query: torch.Tensor, shape : [d_vector, n_query]
       k: int, should be in range [1, n_centroids]
     """
     assert self.centroids is not None, "kmeans is not trained"
