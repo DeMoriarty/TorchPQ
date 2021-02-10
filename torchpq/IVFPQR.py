@@ -34,8 +34,8 @@ class IVFPQR(IVFPQBase):
 
       n_subvectors_r: int, default : 8
         number of sub-quantizers for PQ-rerank, need to be a multiple of 4
-        maximum number of (n_subvectors + n_subvectors_r) depends on GPU architecture
-          GPU Architecture:   fp32  fp16 
+        maximum number of n_subvectors and n_subvectors_r depends on the GPU architecture
+          GPU Architecture   fp32  fp16 
           Ampere (GA100)      163   326  
           Turing (TU102 etc.) 64    128  
           Volta (GV100)       96    192  
@@ -51,7 +51,7 @@ class IVFPQR(IVFPQBase):
 
       blocksize: int, default : 64
         number of vectors that can be asigned to each cluster of coarse_quantizer initially
-        can be expanded using .expand methods, .add method will automatically cal .expand if necessary
+        can be expanded using .expand method, .add method will automatically call .expand if necessary
         recommended value is (n_data_to_be_stored / n_cq_clusters)
 
       verbose: int, default : 0
