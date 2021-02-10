@@ -2,7 +2,7 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel, Stream
+from .CustomKernel import CustomKernel
 from torchpq.util import get_absolute_path
 
 class ComputeProductCUDA(CustomKernel):
@@ -13,13 +13,12 @@ class ComputeProductCUDA(CustomKernel):
       n_cs=4,
       sm_size=48*256*4,
     ):
+    super(ComputeProductCUDA, self).__init__()
     self.m = m
     self.k = k
     self.tpb = 256
     self.n_cs = n_cs
     self.sm_size = sm_size
-    self._use_torch_in_cupy_malloc()
-    self.stream = Stream(torch.cuda.current_stream().cuda_stream)
 
     with open(get_absolute_path("kernels", "ComputeProductKernel.cu"), "r") as f:
       self.kernel = f.read()

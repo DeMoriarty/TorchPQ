@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from .kmeans import MultiKMeans
+from .kernels import PQDecodeCUDA
 
 class PQ(nn.Module):
   def __init__(
@@ -28,6 +29,8 @@ class PQ(nn.Module):
       max_iter = 25,
       verbose = verbose,
     )
+
+    self._decode_cuda = PQDecodeCUDA(tm=2, td=8)
 
   @property
   def codebook(self):
@@ -57,14 +60,26 @@ class PQ(nn.Module):
     _, labels = self.kmeans.get_labels(x, self.codebook) #[n_subvectors, n_data]
     return labels.byte()
 
-  def decode(self, code):
+  @staticmethod
+  def _decode_cpu(codebook, code):
     """
       code: torch.Tensor, shape : [n_subvectors, n_data], dtype : uint8
       return: torch.Tensor, shape : [d_vector, n_data], dtype : float32
     """
     n_subvectors, n_data = code.shape
-    assert n_subvectors == self.n_subvectors
     arange = torch.arange(n_subvectors)[:, None].expand(-1, n_data)
-    res = self.codebook[arange, :, code.long()]
-    res = res.transpose(1, 2).reshape(self.d_vector, n_data)
+    res = codebook[arange, :, code.long()]
+    res = res.transpose(1, 2).reshape(-1, n_data)
     return res
+
+
+  def decode(self, code):
+    """
+      code: torch.Tensor, shape : [n_subvectors, n_data], dtype : uint8
+      return: torch.Tensor, shape : [d_vector, n_data], dtype : float32
+    """
+    assert code.shape[0] == self.n_subvectors
+    if self.codebook.device.type == "cpu":
+      return self._decode_cpu(self.codebook, code)
+    elif self.codebook.device.type == "cuda":
+      return self._decode_cuda(self.codebook, code)

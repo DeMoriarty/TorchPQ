@@ -11,6 +11,10 @@ class Stream:
     self.ptr = ptr
   
 class CustomKernel:
+  def __init__(self):
+    self._use_torch_in_cupy_malloc()
+    self.stream = Stream(torch.cuda.current_stream().cuda_stream)
+    
   @staticmethod
   def _torch_alloc(size):
     device = cp.cuda.Device().id

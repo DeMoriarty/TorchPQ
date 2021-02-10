@@ -2,11 +2,12 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel, Stream
+from .CustomKernel import CustomKernel,
 from torchpq.util import get_absolute_path
 
 class MaxSimCUDA(CustomKernel): 
   def __init__(self, m=None, n=None, k=None, dim=None, distance="euclidean"):
+    super(MaxSimCUDA, self).__init__()
     self.m = m
     self.n = n
     self.k = k
@@ -34,13 +35,12 @@ class MaxSimCUDA(CustomKernel):
       .replace("_DIM_", str(dim) if dim else "DIM")
       .replace("_DISTFN_", distfn)
     )
-    self._use_torch_in_cupy_malloc()
-    self.stream = Stream(torch.cuda.current_stream().cuda_stream)
-    self._raw_module = cp.RawModule(
-      code=self.kernel,
-      backend='nvcc',
-      options=('--maxrregcount=128', '--use_fast_math'),
-    )
+    
+    # self._raw_module = cp.RawModule(
+    #   code=self.kernel,
+    #   backend='nvcc',
+    #   options=('--maxrregcount=128', '--use_fast_math'),
+    # )
     self._fn_tt = cp.RawKernel(
       code=self.kernel,
       name="max_sim_tt",

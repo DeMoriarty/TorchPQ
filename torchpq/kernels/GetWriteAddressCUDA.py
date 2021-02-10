@@ -2,7 +2,7 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel, Stream
+from .CustomKernel import CustomKernel
 from torchpq.util import get_absolute_path
 
 class GetWriteAddressCUDA(CustomKernel):
@@ -11,11 +11,10 @@ class GetWriteAddressCUDA(CustomKernel):
       tpb=256,
       sm_size=48*256*4,
     ):
+    super(GetWriteAddressCUDA, self).__init__()
     self.tpb = tpb
     self.sm_size = sm_size
 
-    self._use_torch_in_cupy_malloc()
-    self.stream = Stream(torch.cuda.current_stream().cuda_stream)
     with open(get_absolute_path("kernels", "GetWriteAddressKernel.cu"), "r") as f:
       self.kernel = f.read()
       
