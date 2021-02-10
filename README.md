@@ -75,7 +75,7 @@ There are some important parameters that needs to be explained:
 `n_cq_clusters * blocksize` is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell will be automatically expanded.
 larger value for `blocksize` is recommended, if you need to add vectors frequently.
 
-* actual byte size would be (n_subvectors+9) bytes, 8 bytes for ID and 1 byte for is_empty
+\* actual byte size would be (n_subvectors+9) bytes, 8 bytes for ID and 1 byte for is_empty
 ### Adding vectors
 ```
 ids = torch.arange(n_data, device="cuda")
