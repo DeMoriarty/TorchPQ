@@ -44,7 +44,7 @@ x = torch.randn(n_kmeans, d_vector, n_data, device="cuda")
 kmeans = MultiKMeans(n_clusters=256, distance="euclidean")
 labels = kmeans.fit(x)
 ```
-### Prediction
+### Prediction with K-means
 ```
 labels = kmeans.predict(x)
 ```
@@ -73,4 +73,35 @@ There are some important parameters that needs to be explained:
 - n_pq_clusters: number of product quantizer clusters, this is assumed to be 256 throughout the entire project, and should not be changed.
 - blocksize: initial capacity assigned to each voronoi cell of coarse quantizer.
 `n_cq_clusters * blocksize` is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell will be automatically expanded.
-larger value for "blocksize" is recommended, if you need to add vectors frequently.
+larger value for `blocksize` is recommended, if you need to add vectors frequently.
+
+### Adding vectors
+```
+ids = torch.arange(n_data, device="cuda")
+index.add(x, input_ids=ids)
+```
+Each ID in `ids` is a unique int64 value that corresponds to a vector in `x`.
+if `input_ids` is not provided to `index.add` (or `input_ids=None`), it will be set to `torch.arange(n_data, device="cuda") + previous_max_id`
+
+### Removing vectors
+```
+index.remove(ids)
+```
+`index.remove(ids)` will virtually remove vectors with specified `ids` from storage.
+It will ignore ids that doesn't exist.
+
+### Topk search
+```
+n_query = 10000
+query = torch.randn(d_vector, n_query, device="cuda:0")
+index.topk(query, k=100)
+```
+
+### Encoding and Decoding
+```
+code = index.encode(query)
+reconstruction = index.decode(code)
+```
+
+## Benchmark
+TODO
