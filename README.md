@@ -67,15 +67,16 @@ index = IVFPQ(
 index.train(x)
 ```
 There are some important parameters that needs to be explained:  
-- d_vector: dimentionality of input vectors
-- n_subvectors: number of subquantizers, essentially this is the byte size of each quantized vector, 64Byte/vector in the above example*
+- d_vector: dimentionality of input vectors. `d_vector` needs to be divisible by `n_subvectors`, `d_vector` also needs to be a multiple of 4.*
+- n_subvectors: number of subquantizers, essentially this is the byte size of each quantized vector, 64Byte/vector in the above example.**
 - n_cq_clusters: number of coarse quantizer clusters
 - n_pq_clusters: number of product quantizer clusters, this is assumed to be 256 throughout the entire project, and should not be changed.
 - blocksize: initial capacity assigned to each voronoi cell of coarse quantizer.
 `n_cq_clusters * blocksize` is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell will be automatically expanded.
 larger value for `blocksize` is recommended, if you need to add vectors frequently.
 
-\* actual byte size would be (n_subvectors+9) bytes, 8 bytes for ID and 1 byte for is_empty
+\* the second constraint could be removed in the future
+\*\* actual byte size would be (n_subvectors+9) bytes, 8 bytes for ID and 1 byte for is_empty
 ### Adding vectors
 ```
 ids = torch.arange(n_data, device="cuda")
