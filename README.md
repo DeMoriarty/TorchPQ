@@ -50,11 +50,9 @@ labels = kmeans.predict(x)
 ```
 
 ### Training IVFPQ
-```
+```python
 from torchpq import IVFPQ
-import torch
 
-x = torch.randn(d_vector, n_data)
 index = IVFPQ(
   d_vector=d_vector,
   n_subvectors=64,
@@ -64,6 +62,7 @@ index = IVFPQ(
   distance="euclidean",
 )
 
+x = torch.randn(d_vector, n_data)
 index.train(x)
 ```
 There are some important parameters that needs to be explained:  
@@ -78,22 +77,22 @@ larger value for `blocksize` is recommended, if you need to add vectors frequent
 \* the second constraint could be removed in the future
 \*\* actual byte size would be (n_subvectors+9) bytes, 8 bytes for ID and 1 byte for is_empty
 ### Adding vectors
-```
+```python
 ids = torch.arange(n_data, device="cuda")
 index.add(x, input_ids=ids)
 ```
-Each ID in `ids` is a unique int64 value that corresponds to a vector in `x`.
+Each ID in `ids` needs to be unique int64 value that corresponds to a vector in `x`.
 if `input_ids` is not provided to `index.add` (or `input_ids=None`), it will be set to `torch.arange(n_data, device="cuda") + previous_max_id`
 
 ### Removing vectors
-```
+```python
 index.remove(ids)
 ```
 `index.remove(ids)` will virtually remove vectors with specified `ids` from storage.
 It will ignore ids that doesn't exist.
 
 ### Topk search
-```
+```python
 n_query = 10000
 query = torch.randn(d_vector, n_query, device="cuda:0")
 topk_values, topk_ids = index.topk(query, k=100)
@@ -104,7 +103,7 @@ topk_values, topk_ids = index.topk(query, k=100)
 - when `distance="cosine"`, `topk_values` are cosine similarity between queries and topk closest data points.
 
 ### Encoding and Decoding
-```
+```python
 code = index.encode(query)
 reconstruction = index.decode(code)
 ```
