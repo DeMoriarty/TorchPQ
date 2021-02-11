@@ -6,20 +6,22 @@ from .kernels import GetAddressOfIDCUDA
 from .kernels import GetDivOfAddressCUDA
 from .kernels import GetIOACUDA
 from .kernels import GetWriteAddressCUDA
+from .SQ import SQ
 
 class IVFPQBase(nn.Module):
   def __init__(
     self,
+    d_vector,
     code_size,
     n_cq_clusters,
     blocksize,
     verbose,
     distance,
-    device
+    cpu_quantizer,
+    device,
     ):
     """
     this is a base class for IVFPQ variants
-    for more details, you can search 'Product Quantization for Nearest Neighbor Search'
 
     Parameters:
       d_vector: int
@@ -50,19 +52,40 @@ class IVFPQBase(nn.Module):
         type of distance metric
         can be one of: ['euclidean', 'cosine', 'inner']
 
+      cpu_quantizer: SQ or None, default : None
+        scalar quantizer used to quantize datapoints to be stored in CPU RAM
+        if None is given, CPU RAM will not be used.
+
       device: str, default : 'cuda:0'
         which device to use
         can be one of: ['cpu', 'cuda', 'cuda:X'] *X represents cuda device index
       
     """
     super(IVFPQBase, self).__init__()
-    n_cs = 4
-    self.n_cs = n_cs
+    self.n_cs = 4
+    assert code_size % self.n_cs == 0, f"code_size needs to be a multiple of {self.n_cs}"
+    
+    self.d_vector = d_vector
     self.code_size = code_size
-    assert code_size % self.n_cs == 0, f"code_size needs to be a multiple of {n_cs}"
     self.n_cq_clusters = n_cq_clusters
     self.blocksize = blocksize
     self.verbose = verbose
+    self.register_buffer("_is_trained", torch.tensor(False))
+    self.device = device
+    self.cpu_quantizer = cpu_quantizer
+    if cpu_quantizer is not None:
+      if cpu_quantizer.bits in [32, 16, 8]:
+        self.cpu_code_size = d_vector
+      elif cpu_quantizer.bits in [4]:
+        self.cpu_code_size = d_vector // 2
+
+      if cpu_quantizer.bits == 32:
+        self.cpu_dtype = torch.float32
+      elif cpu_quantizer.bits == 16:
+        self.cpu_dtype = torch.float16
+      elif cpu_quantizer.bits in [8, 4]:
+        self.cpu_dtype = torch.uint8
+
     if distance.lower() in ["euclidean", "l2"]:
       distance = "euclidean"
     elif distance.lower() in ["dot", "inner"]:
@@ -71,16 +94,26 @@ class IVFPQBase(nn.Module):
       distance = "cosine"
     self.distance = distance
       
-    self.register_buffer("_is_trained", torch.tensor(False))
-    self.device = device
+    
 
     storage = torch.zeros(
-      code_size // n_cs,
+      code_size // self.n_cs,
       blocksize * n_cq_clusters,
-      n_cs,
+      self.n_cs,
       device=self.device,
       dtype=torch.uint8,
     )
+
+    if cpu_quantizer is None:
+      cpu_storage = None
+    else:
+      cpu_storage = torch.zeros(
+        self.cpu_code_size,
+        blocksize * n_cq_clusters,
+        device="cpu",
+        dtype=self.cpu_dtype,
+      )
+
     address2id = torch.ones(
       blocksize * n_cq_clusters,
       device=self.device,
@@ -106,6 +139,7 @@ class IVFPQBase(nn.Module):
       dtype=torch.long
     )
     self.register_buffer("storage", storage)
+    self.register_buffer("cpu_storage", cpu_storage)
     self.register_buffer("div_start", div_start)
     self.register_buffer("div_capacity",div_capacity)
     self.register_buffer("div_size", div_size)
@@ -305,6 +339,31 @@ class IVFPQBase(nn.Module):
     data = self.get_data_of_address(address)
     return data
 
+  def get_cpu_data_of_address(self, address):
+    """
+      address: torch.Tensor, shape : [n_address], dtype : int64
+      return: torch.Tensor, shape : [cpu_code_size, n_address], dtype : cpu_dtype
+      address must be in range [0, tot_capacity)
+    """
+    if self.cpu_storage is not None:
+      n_address = address.shape[0]
+      assert address.dtype == torch.long
+      mask = address < 0
+      data = self.cpu_storage[:, address] #[cpu_code_size, n_address]
+      if mask.sum() > 0:
+        data[:, mask] = 0
+      return data
+
+  def get_cpu_data_of_id(self, ids):
+    """
+      ids: torch.Tensor, shape : [n_ids], dtype : int64
+      returns: torch.Tensor, [cpu_code_size, n_ids]
+      if an id doesn't exist, its retrieved data will be zeros.
+    """
+    address = self.get_address_of_id(ids)
+    data = self.get_cpu_data_of_address(address)
+    return data
+
   def set_data_of_address(self, data, address):
     """
       data: torch.Tensor, shape : [code_size // n_cs, n_data, n_cs], dtype : uint8
@@ -318,7 +377,26 @@ class IVFPQBase(nn.Module):
       ids: torch.Tensor, shape : [n_data], dtype : int64
     """
     address = self.get_address_of_id(ids)
-    set_data_of_address(data, address)
+    self.set_data_of_address(data, address)
+
+  def set_cpu_data_of_address(self, data, address):
+    """
+      data: torch.Tensor, shape : [cpu_code_size, n_data, ], dtype : cpu_dtype
+      address: torch.Tensor, shape : [n_data], dtype : int64
+    """
+    if self.cpu_storage is not None:
+      assert data.dtype == self.cpu_dtype
+      assert data.shape[0] == self.cpu_code_size
+      self.cpu_storage[:, address] = data
+
+  def set_cpu_data_of_id(self, data, ids):
+    """
+      data: torch.Tensor, shape : [code_size // n_cs, n_data, n_cs], dtype : uint8
+      ids: torch.Tensor, shape : [n_data], dtype : int64
+    """
+    if self.cpu_storage is not None:
+      address = self.get_address_of_id(ids)
+      self.set_cpu_data_of_address(data, address)
 
   def _get_ioa_old(self, labels, unique_labels=None):
     if unique_labels is None:
@@ -365,11 +443,13 @@ class IVFPQBase(nn.Module):
     storage = self.storage
     address2id = self.address2id
     is_empty = self.is_empty
-    del self.storage, self.address2id, self.is_empty
+    cpu_storage = self.cpu_storage
+    del self.storage, self.address2id, self.is_empty, self.cpu_storage
     for cluster_index in clusters:
       div_start = self.div_start[cluster_index]
       div_cap = self.div_capacity[cluster_index].item()
       div_end = div_start + div_cap
+
       new_block = torch.zeros(
         self.code_size // self.n_cs,
         div_cap,
@@ -381,6 +461,19 @@ class IVFPQBase(nn.Module):
         new_block,
         storage[:, div_end:]
       ], dim=1)
+      
+      if cpu_storage is not None:
+        cpu_new_block = torch.zeros(
+          self.cpu_code_size,
+          div_cap,
+          device="cpu",
+          dtype=self.cpu_dtype
+        )
+        cpu_storage = torch.cat([
+          cpu_storage[:, :div_end],
+          cpu_new_block,
+          cpu_storage[:, div_end:]
+        ], dim=1)
 
       new_a2i = torch.ones(div_cap, device=self.device, dtype=address2id.dtype) * -1
       address2id = torch.cat([
@@ -402,11 +495,20 @@ class IVFPQBase(nn.Module):
       # self.div_start[:] = self.div_capacity.cumsum(dim=0)
       tot += div_cap
     self.register_buffer("storage", storage)
+    self.register_buffer("cpu_storage", cpu_storage)
     self.register_buffer("address2id", address2id)
     self.register_buffer("is_empty", is_empty)
     if self.verbose > 1:
       print(f"Storage capacity is increased by {tot}, total capacity: {self.storage.shape[1]}")
   
+  def add_to_cpu_ram(self, input, address):
+    """
+      add scalar quantized input to cpu ram.
+    """
+    if self.cpu_storage is not None:
+      code = self.cpu_storage.encode(input)
+      self.set_cpu_data_of_address(code, address)
+
   def add(self, input, input_ids=None):
     """
       has to be overrided in child class
@@ -436,7 +538,7 @@ class IVFPQBase(nn.Module):
       has to be overrided in child class
     """
     raise NotImplementedError("method needs to be overrided in child class")
-  
+
   def encode(self, input):
     """
       has to be overrided in child class

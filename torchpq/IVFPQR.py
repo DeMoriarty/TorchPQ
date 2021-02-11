@@ -19,6 +19,7 @@ class IVFPQR(IVFPQBase):
     use_residual=True,
     rerank_factor=2,
     distance="euclidean",
+    cpu_quantizer=None,
     device='cuda:0'
     ):
     """
@@ -61,6 +62,10 @@ class IVFPQR(IVFPQBase):
         type of distance metric
         can be one of: ['euclidean', 'cosine', 'inner']
 
+      cpu_quantizer: SQ or None, default : None
+        scalar quantizer used to quantize datapoints to be stored in CPU RAM
+        if None is given, CPU RAM will not be used.
+
       device: str, default : 'cuda:0'
         which device to use
         can be one of: ['cpu', 'cuda', 'cuda:X'] *X represents cuda device index
@@ -98,11 +103,13 @@ class IVFPQR(IVFPQBase):
       assert n_subvectors_r <= 99
     
     super(IVFPQR, self).__init__(
+      d_vector=d_vector,
       code_size=n_subvectors+n_subvectors_r,
       n_cq_clusters=n_cq_clusters,
       blocksize=blocksize,
       verbose=verbose,
       distance=distance,
+      cpu_quantizer=cpu_quantizer,
       device=device
     )
 
@@ -240,6 +247,8 @@ class IVFPQR(IVFPQBase):
       n_data
     ).transpose(1, 2)
     self.set_data_of_address(code, write_address)
+    if self.cpu_quantizer is not None:
+      self.add_to_cpu_ram(input, write_address)
 
     #store ids
     if input_ids is None:
@@ -271,6 +280,11 @@ class IVFPQR(IVFPQBase):
     assert d_vector == self.d_vector
     if self.distance == "cosine":
       input = self.normalize(input)
+
+    if self.cpu_quantizer is not None:
+      if self.verbose > 0:
+        print("Start training scalar quantizer")
+      self.cpu_quantizer.train(input)
 
     if self.verbose > 0:
       print("Start training coarse quantizer...")
@@ -343,12 +357,13 @@ class IVFPQR(IVFPQBase):
       result = precomputed[arange, :, data[:].long() ].sum(dim=1).T #[]
       return result
   
-  def topk(self, query, k, mode=2):
+  def topk(self, query, k, mode=2, return_address=False):
     """
       query: torch.Tensor, shape : [d_vector, n_query], dtype : float32
       k: int
       mode: int, default : 2
         mode 2 is generally faster, but MIGHT have slight errors
+      return_address: bool, default : False 
     """
     assert self._is_trained == True, "module is not trained"
     d_vector, n_query = query.shape
@@ -452,4 +467,7 @@ class IVFPQR(IVFPQBase):
       topk_address = torch.gather(selected_address, index=topk_selected_address.long(), dim=1)
       topki = self.get_id_of_address(topk_address)
 
-    return (topkv, topki)
+    if return_address:
+      return (topkv, topki, topk_address)
+    else:
+      return (topkv, topki)
