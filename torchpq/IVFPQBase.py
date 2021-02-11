@@ -505,8 +505,8 @@ class IVFPQBase(nn.Module):
     """
       add scalar quantized input to cpu ram.
     """
-    if self.cpu_storage is not None:
-      code = self.cpu_storage.encode(input)
+    if self.cpu_quantizer is not None:
+      code = self.cpu_quantizer.encode(input)
       self.set_cpu_data_of_address(code, address)
 
   def add(self, input, input_ids=None):
