@@ -98,10 +98,10 @@ n_query = 10000
 query = torch.randn(d_vector, n_query, device="cuda:0")
 topk_values, topk_ids = index.topk(query, k=100)
 ```
-- when `distance="inner"`, `topk_values` are maximum inner product of queries and topk closest data points.
-- when `distance="euclidean"`, `topk_values` are maximum negative squared L2 distance between queries and topk closest data points.
-- when `distance="manhattan"`, `topk_values` are maximum negative L1 distance between queries and topk closest data points.
-- when `distance="cosine"`, `topk_values` are maximum cosine similarity between queries and topk closest data points.
+- when `distance="inner"`, `topk_values` are inner product of queries and topk closest data points.
+- when `distance="euclidean"`, `topk_values` are negative squared L2 distance between queries and topk closest data points.
+- when `distance="manhattan"`, `topk_values` are negative L1 distance between queries and topk closest data points.
+- when `distance="cosine"`, `topk_values` are cosine similarity between queries and topk closest data points.
 
 ### Encoding and Decoding
 ```
