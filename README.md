@@ -50,11 +50,9 @@ labels = kmeans.predict(x)
 ```
 
 ### Training IVFPQ
-```
+```python
 from torchpq import IVFPQ
-import torch
 
-x = torch.randn(d_vector, n_data)
 index = IVFPQ(
   d_vector=d_vector,
   n_subvectors=64,
@@ -64,42 +62,48 @@ index = IVFPQ(
   distance="euclidean",
 )
 
+x = torch.randn(d_vector, n_data)
 index.train(x)
 ```
 There are some important parameters that needs to be explained:  
-- d_vector: dimentionality of input vectors
-- n_subvectors: number of subquantizers, essentially this is the byte size of each quantized vector, 64Byte/vector in the above example*
+- d_vector: dimentionality of input vectors. `d_vector` needs to be divisible by `n_subvectors`, `d_vector` also needs to be a multiple of 4.*
+- n_subvectors: number of subquantizers, essentially this is the byte size of each quantized vector, 64Byte/vector in the above example.**
 - n_cq_clusters: number of coarse quantizer clusters
 - n_pq_clusters: number of product quantizer clusters, this is assumed to be 256 throughout the entire project, and should not be changed.
 - blocksize: initial capacity assigned to each voronoi cell of coarse quantizer.
 `n_cq_clusters * blocksize` is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell will be automatically expanded.
 larger value for `blocksize` is recommended, if you need to add vectors frequently.
 
-\* actual byte size would be (n_subvectors+9) bytes, 8 bytes for ID and 1 byte for is_empty
+\* the second constraint could be removed in the future
+\*\* actual byte size would be (n_subvectors+9) bytes, 8 bytes for ID and 1 byte for is_empty
 ### Adding vectors
-```
+```python
 ids = torch.arange(n_data, device="cuda")
 index.add(x, input_ids=ids)
 ```
-Each ID in `ids` is a unique int64 value that corresponds to a vector in `x`.
+Each ID in `ids` needs to be unique int64 value that corresponds to a vector in `x`.
 if `input_ids` is not provided to `index.add` (or `input_ids=None`), it will be set to `torch.arange(n_data, device="cuda") + previous_max_id`
 
 ### Removing vectors
-```
+```python
 index.remove(ids)
 ```
 `index.remove(ids)` will virtually remove vectors with specified `ids` from storage.
 It will ignore ids that doesn't exist.
 
 ### Topk search
-```
+```python
 n_query = 10000
 query = torch.randn(d_vector, n_query, device="cuda:0")
-index.topk(query, k=100)
+topk_values, topk_ids = index.topk(query, k=100)
 ```
+- when `distance="inner"`, `topk_values` are inner product of queries and topk closest data points.
+- when `distance="euclidean"`, `topk_values` are negative squared L2 distance between queries and topk closest data points.
+- when `distance="manhattan"`, `topk_values` are negative L1 distance between queries and topk closest data points.
+- when `distance="cosine"`, `topk_values` are cosine similarity between queries and topk closest data points.
 
 ### Encoding and Decoding
-```
+```python
 code = index.encode(query)
 reconstruction = index.decode(code)
 ```
