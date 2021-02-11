@@ -346,6 +346,7 @@ class IVFPQBase(nn.Module):
       address must be in range [0, tot_capacity)
     """
     if self.cpu_storage is not None:
+      address = address.cpu()
       n_address = address.shape[0]
       assert address.dtype == torch.long
       mask = address < 0
@@ -387,6 +388,8 @@ class IVFPQBase(nn.Module):
     if self.cpu_storage is not None:
       assert data.dtype == self.cpu_dtype
       assert data.shape[0] == self.cpu_code_size
+      address = address.cpu()
+      data = data.cpu()
       self.cpu_storage[:, address] = data
 
   def set_cpu_data_of_id(self, data, ids):
