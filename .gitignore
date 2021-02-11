@@ -4,3 +4,4 @@ dist/
 sdist/
 wheels/
 build/
+compare.py
