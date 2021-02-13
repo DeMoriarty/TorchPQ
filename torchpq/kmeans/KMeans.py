@@ -117,6 +117,10 @@ class KMeans(nn.Module):
     return diff.sum()
 
   @staticmethod
+  def calculate_inertia(a):
+    return (-a).mean()
+
+  @staticmethod
   def cos_sim(a, b, normalize=True, inplace=False):
     """
       Computes cosine similarity between 'a' and 'b'
@@ -228,12 +232,12 @@ class KMeans(nn.Module):
         replace=False
       )
       centroids = data[:, random_index]
-      if self.verbose >= 1:
+      if self.verbose > 1:
         print("centroids are randomly initialized.")
 
     elif self.init_mode == "kmeans++":
       centroids = self.kmeanspp(data)
-      if self.verbose >= 1:
+      if self.verbose > 1:
         print("kmeans++ initialization is done!")
     return centroids
 
@@ -316,7 +320,7 @@ class KMeans(nn.Module):
       labels: torch.Tensor, shape : [n_data]
       return: torch.Tensor, shape: [d_vector, n_clusters]
     """
-    if self.n_clusters <= 256 or data.device == torch.device("cpu"):
+    if data.device == torch.device("cpu"):
       centroids = self.compute_centroids_loop(data, labels)
     else:
       centroids = self.compute_centroids_cuda(data[None,], labels[None,], k=self.n_clusters)
@@ -344,7 +348,7 @@ class KMeans(nn.Module):
 
     return centroids
 
-  def fit(self, data):
+  def fit(self, data, centroids=None):
     """
       Perform K-means clustering, and return final labels
       data: torch.Tensor, shape : [d_vector, n_data]
@@ -359,15 +363,17 @@ class KMeans(nn.Module):
     tm = time()
     for i in range(self.n_redo):
       tm_i = time()
-      centroids = self.initialize_centroids(data)
+      if centroids is None:
+        centroids = self.initialize_centroids(data)
       for j in range(self.max_iter):
         # 1 iteration of clustering
         maxsims, labels = self.get_labels(data, centroids) #top1 search
         new_centroids = self.compute_centroids(data, labels)
         error = self.calculate_error(centroids, new_centroids)
         centroids = new_centroids
-        inertia = torch.sum(1-maxsims)
-        if self.verbose >= 3:
+        # inertia = torch.sum(1-maxsims)
+        inertia = self.calculate_inertia(maxsims)
+        if self.verbose == 3:
           print(f"----iteration {j} of {i}th redo, error={error.item()}, inertia={inertia.item()}")
         if error <= self.tol:
           break
@@ -377,11 +383,11 @@ class KMeans(nn.Module):
         best_error = error
         best_labels = labels
         best_inertia = inertia
-      if self.verbose >= 2:
+      if self.verbose == 2:
         print(f"--{i}th redo finished, error: {error.item()}, inertia: {inertia.item()}time spent:{round(time()-tm_i, 4)} sec")
 
     self.register_buffer("centroids", best_centroids)
-    if self.verbose >= 1:
+    if self.verbose == 1:
       print(f"finished {self.n_redo} redos in {round(time()-tm, 4)} sec, final_inertia: {best_inertia}")
     return best_labels
 

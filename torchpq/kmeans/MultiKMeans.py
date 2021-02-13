@@ -324,7 +324,7 @@ class MultiKMeans(nn.Module):
       labels: torch.Tensor, shape : [l, n_data]
       return: torch.Tensor, shape: [l, d_vector, n_clusters]
     """
-    if self.n_clusters <= 256 or data.device == torch.device("cpu"):
+    if data.device == torch.device("cpu"):
       centroids = self.compute_centroids_loop(data, labels)
     else:
       centroids = self.compute_centroids_cuda(data, labels, k=self.n_clusters)
@@ -351,7 +351,7 @@ class MultiKMeans(nn.Module):
 
     return centroids
 
-  def fit(self, data):
+  def fit(self, data, centroids=None):
     """
       Perform K-means clustering, and return final labels
       data: torch.Tensor, shape : [l, d_vector, n_data]
@@ -366,7 +366,8 @@ class MultiKMeans(nn.Module):
     tm = time()
     for i in range(self.n_redo):
       tm_i = time()
-      centroids = self.initialize_centroids(data)
+      if centroids is None:
+        centroids = self.initialize_centroids(data)
       for j in range(self.max_iter):
         # 1 iteration of clustering
         maxsims, labels = self.get_labels(data, centroids) #top1 search

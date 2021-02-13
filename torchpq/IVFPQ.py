@@ -216,7 +216,7 @@ class IVFPQ(IVFPQBase):
 
     if self.verbose > 0:
       print("Start training product quantizer...")
-    self.product_q.train_codebook(input)
+    self.product_q.train(input)
 
     self._is_trained.data = torch.tensor(True)
     if self.verbose > 0:
@@ -265,13 +265,7 @@ class IVFPQ(IVFPQBase):
     if mode == 1: div_size = self.div_capacity[topk_labels].int()
     elif mode == 2: div_size = self.div_size[topk_labels].int()
 
-    query = query.reshape(self.n_subvectors, self.d_subvector, n_query)
-    codebook = self.product_q.codebook #[n_subvectors, d_subvector, n_pq_clusters]
-    # if self.distance in ["cosine", "inner"]:
-    #   precomputed = self.product_q.kmeans.cos_sim(query, codebook, normalize=False)
-    # elif self.distance in ["euclidean"]:
-    #   precomputed = self.product_q.kmeans.euc_sim(query, codebook)
-    precomputed = self.product_q.kmeans.sim(query, codebook, normalize=False)
+    precomputed = self.product_q.precompute_adc(query)
 
     topkv, topk_address = self._topk_fn(
       k=k,

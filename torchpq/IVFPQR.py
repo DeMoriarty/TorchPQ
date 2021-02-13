@@ -57,12 +57,19 @@ class IVFPQR(IVFPQBase):
 
       verbose: int, default : 0
         verbosity
+      
+      use_residual: bool, default : True
+        encode residual vectors in PQ-rerank
+
+      rerank_factor: int, default : 2
+        the first PQ will output k * rerank_factor candidates when performing topk search
+        PQ-rerank will rerank these candidates and generate the final topk results.
 
       distance: str, default : 'euclidean'
         type of distance metric
         can be one of: ['euclidean', 'cosine', 'inner']
 
-      cpu_quantizer: SQ or None, default : None
+      cpu_quantizer: torchpq.SQ or None, default : None
         scalar quantizer used to quantize datapoints to be stored in CPU RAM
         if None is given, CPU RAM will not be used.
 
@@ -292,7 +299,7 @@ class IVFPQR(IVFPQBase):
 
     if self.verbose > 0:
       print("Start training product quantizer...")
-    code = self.product_q.train_codebook(input)
+    code = self.product_q.train(input)
 
     if self.use_residual:
       reconstructed = self.product_q.decode(code)
@@ -303,7 +310,7 @@ class IVFPQR(IVFPQBase):
       if self.verbose > 0:
         print("Start training PQ-rerank...")
 
-    self.product_q_r.train_codebook(input)
+    self.product_q_r.train(input)
 
     self._is_trained.data = torch.tensor(True)
     if self.verbose > 0:
@@ -329,7 +336,7 @@ class IVFPQR(IVFPQBase):
 
   def decode(self, code):
     """
-      code: torch.Tensor, shape : [(n_subvectors+n_subvectors_r), n_data], dtype : uint8
+      code: torch.Tensor, shape : [(n_subvectors + n_subvectors_r), n_data], dtype : uint8
       return: torch.Tensor, shape : [d_vector, n_data], dtype : float32
     """
     assert self._is_trained == True, "Module is not trained"
@@ -380,9 +387,10 @@ class IVFPQR(IVFPQBase):
     elif mode == 2: div_size = self.div_size[topk_labels].int()
 
     # selection with PQ
-    reshaped_query = query.reshape(self.n_subvectors, self.d_subvector, n_query)
-    codebook = self.product_q.codebook #[n_subvectors, d_subvector, n_pq_clusters]
-    precomputed = self.product_q.kmeans.sim(reshaped_query, codebook, normalize=False)#[n_subvectors, n_query, n_pq_clusters]
+    # reshaped_query = query.reshape(self.n_subvectors, self.d_subvector, n_query)
+    # codebook = self.product_q.codebook #[n_subvectors, d_subvector, n_pq_clusters]
+    # precomputed = self.product_q.kmeans.sim(reshaped_query, codebook, normalize=False)#[n_subvectors, n_query, n_pq_clusters]
+    precomputed = self.product_q.precompute_adc(query)
 
     selectedv, selected_address = self._topk_fn(
       k=k * self.rerank_factor,
@@ -438,8 +446,9 @@ class IVFPQR(IVFPQBase):
         n_query * k * self.rerank_factor,
         self.n_cs
       )
-      reshaped_query2 = query.reshape(self.n_subvectors_r, self.d_subvector_r, n_query)
-      precomputed2 = self.product_q_r.kmeans.sim(reshaped_query2, codebook2, normalize=False)
+      # reshaped_query2 = query.reshape(self.n_subvectors_r, self.d_subvector_r, n_query)
+      # precomputed2 = self.product_q_r.kmeans.sim(reshaped_query2, codebook2, normalize=False)
+      precomputed2 = self.product_q_r.precompute_adc(query)
 
       is_empty2 = torch.zeros(
         n_query * k * self.rerank_factor,

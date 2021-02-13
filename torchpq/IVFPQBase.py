@@ -67,6 +67,7 @@ class IVFPQBase(nn.Module):
     
     self.d_vector = d_vector
     self.code_size = code_size
+    self.extra_code_size = 9
     self.n_cq_clusters = n_cq_clusters
     self.blocksize = blocksize
     self.verbose = verbose
@@ -196,7 +197,7 @@ class IVFPQBase(nn.Module):
       total capacity of storage = {self.tot_capacity},
       byte size on CPU = {cpu_bytesize},
       byte size on GPU = {gpu_bytesize},
-      code size = {self.code_size} B,
+      code size = {self.code_size} + {self.extra_code_size} B,
       is trained = {self._is_trained.item()}
     )
     """

@@ -40,7 +40,7 @@ class PQ(nn.Module):
     """
     return self.kmeans.centroids
 
-  def train_codebook(self, x):
+  def train(self, x):
     """
       x: torch.Tensor, shape : [d_vector, n_data], dtype : float32
     """
@@ -48,6 +48,17 @@ class PQ(nn.Module):
     assert d_vector == self.d_vector
     x = x.reshape(self.n_subvectors, self.d_subvector, n_data)
     return self.kmeans.fit(x)
+
+  def precompute_adc(self, query):
+    """
+      x: torch.Tensor, shape : [d_vector, n_query], dtype : float32
+    """
+    n_query = query.shape[1]
+    assert query.shape[0] == self.d_vector
+    
+    query = query.reshape(self.n_subvectors, self.d_subvector, n_query)
+    precomputed = self.kmeans.sim(query, self.codebook, normalize=False)
+    return precomputed
 
   def encode(self, x):
     """
