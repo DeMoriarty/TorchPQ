@@ -5,3 +5,6 @@ sdist/
 wheels/
 build/
 compare.py
+faiss_ivfpq_sift1m_results.json
+ivfpq_sift1m_results.json
+read.py
