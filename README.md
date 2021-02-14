@@ -118,11 +118,11 @@ index.load_state_dict(torch.load(PATH))
 ```
 
 ## Benchmark
-Faiss is one of the most well known ANN search libraries, and it also has a GPU implementation of IVFPQ, so we did some comparison experiments with faiss.  
 All experiments were performed with a Tesla T4 GPU.
 
 ### SIFT1M
 #### IVFPQ
+Faiss is one of the most well known ANN search libraries, and it also has a GPU implementation of IVFPQ, so we did some comparison experiments with faiss.  
 <p float="left">
   <img src="/imgs/6.png" width="100%"/>
 </p>  
