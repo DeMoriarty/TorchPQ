@@ -136,6 +136,5 @@ All experiments were performed with a Tesla T4 GPU.
   <img src="/imgs/tiny/2.png" width="49%"/>
 </p>  
 
-- IVFPQ+R greatly improves recall@1 score while having similar queries/second as IVFPQ, however, this comes with a cost of large code sizes.
 ### GIST1M
 coming soon...
