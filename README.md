@@ -132,9 +132,10 @@ All experiments were performed with a Tesla T4 GPU.
 - for IVF4096, torchpq has lower recall@1 compared to faiss, could be caused by bugs in CUDA kernels.
 #### IVFPQ+R
 <p float="left">
-  <img src="/imgs/tiny/1.png" width="100%"/>
-  <img src="/imgs/tiny/2.png" width="100%"/>
+  <img src="/imgs/tiny/1.png" width="49%"/>
+  <img src="/imgs/tiny/2.png" width="49%"/>
 </p>  
 
+- IVFPQ+R greatly improves recall@1 score while having similar queries/second as IVFPQ, however, this comes with a cost of large code sizes.
 ### GIST1M
 coming soon...
