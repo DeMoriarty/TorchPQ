@@ -102,11 +102,32 @@ topk_values, topk_ids = index.topk(query, k=100)
 - when `distance="manhattan"`, `topk_values` are negative L1 distance between queries and topk closest data points.
 - when `distance="cosine"`, `topk_values` are cosine similarity between queries and topk closest data points.
 
-### Encoding and Decoding
+### Encode and Decode
 ```python
 code = index.encode(query)
 reconstruction = index.decode(code)
 ```
 
+### Save and Load
+Most of the TorchPQ classes are inherited from `torch.nn.Module`, this means you can save and load them just like a pytorch model.
+```python
+# Save to PATH
+torch.save(index.state_dict(), PATH)
+# Load from PATH
+index.load_state_dict(torch.load(PATH))
+```
+
 ## Benchmark
-TODO
+Faiss is one of the most well known ANN search libraries, and it also has a GPU implementation of IVFPQ, so we did some comparison experiments with faiss.  
+All experiments were performed with a Tesla T4 GPU.
+
+### SIFT1M
+<p float="left">
+  <img src="/imgs/6.png" width="100%"/>
+</p>  
+
+- when n_probe > 16, torchpq outperforms faiss, when n_probe < 16, faiss is faster
+- when n_subvectors <= 16, faiss is generally faster.
+- for IVF4096, torchpq has lower recall@1 compared to faiss, could be caused by bugs in CUDA kernels.
+### GIST1M
+coming soon...
