@@ -122,6 +122,7 @@ Faiss is one of the most well known ANN search libraries, and it also has a GPU 
 All experiments were performed with a Tesla T4 GPU.
 
 ### SIFT1M
+#### IVFPQ
 <p float="left">
   <img src="/imgs/6.png" width="100%"/>
 </p>  
@@ -129,5 +130,11 @@ All experiments were performed with a Tesla T4 GPU.
 - when n_probe > 16, torchpq outperforms faiss, when n_probe < 16, faiss is faster
 - when n_subvectors <= 16, faiss is generally faster.
 - for IVF4096, torchpq has lower recall@1 compared to faiss, could be caused by bugs in CUDA kernels.
+#### IVFPQ+R
+<p float="left">
+  <img src="/imgs/tiny/1.png" width="100%"/>
+  <img src="/imgs/tiny/2.png" width="100%"/>
+</p>  
+
 ### GIST1M
 coming soon...
