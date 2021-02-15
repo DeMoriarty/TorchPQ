@@ -185,6 +185,8 @@ class MultiKMeans(nn.Module):
       return self.euc_sim(a, b, inplace=inplace)
     elif self.distance == "cosine":
       return self.cos_sim(a, b, inplace=inplace, normalize=normalize)
+    elif self.distance == "inner":
+      return self.cos_sim(a, b, inplace=inplace, normalize=False)
 
   ### Need more testing:
   def kmeanspp(self, data):
@@ -253,7 +255,7 @@ class MultiKMeans(nn.Module):
 
     if self.distance == "euclidean":
       required = l*(m*n + max(m, n) + m*d + n*d) * data.element_size()
-    elif self.distance == "cosine":
+    elif self.distance in ["cosine", "inner"]:
       required = l*((m*n) + (m+n)*(d+1)) * data.element_size()
     if remaining >= required:
       sims = self.sim(data, centroids, inplace=False) #[l, m, n]
@@ -277,7 +279,7 @@ class MultiKMeans(nn.Module):
           sub_m = math.ceil(m / n_partitions)
           if self.distance == "euclidean":
             required = l*(sub_m*n + max(sub_m, n)) * data.element_size() + m*8 # +sub_m*d*4
-          elif self.distance == "cosine":
+          elif self.distance in ["cosine", "inner"]:
             required = l*(sub_m*n + sub_m+n) * data.element_size() + m*8# +sub_m*d*4
           # print("required, remaining, n_p", required / 1024**3, remaining / 1024**3, n_partitions)
           if self.does_it_fit(required // 4, device=data.device, dtype=torch.float):

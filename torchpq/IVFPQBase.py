@@ -191,16 +191,14 @@ class IVFPQBase(nn.Module):
     cpu_bytesize = get_bytesize_str(bytesize[0])
     gpu_bytesize = get_bytesize_str(bytesize[1])
 
-    txt =  f"""
-    {type(self).__name__}(
+    txt =  f""" {type(self).__name__}(
       number of stored items = {self.tot_size},
       total capacity of storage = {self.tot_capacity},
       byte size on CPU = {cpu_bytesize},
       byte size on GPU = {gpu_bytesize},
       code size = {self.code_size} + {self.extra_code_size} B,
       is trained = {self._is_trained.item()}
-    )
-    """
+    )"""
     txt = '\n'.join([i[4:] for i in txt.split('\n')])
     return txt
 

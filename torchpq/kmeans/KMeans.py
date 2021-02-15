@@ -189,6 +189,8 @@ class KMeans(nn.Module):
       return self.euc_sim(a, b, inplace=inplace)
     elif self.distance == "cosine":
       return self.cos_sim(a, b, inplace=inplace, normalize=normalize)
+    elif self.distance == "inner":
+      return self.cos_sim(a, b, inplace=inplace, normalize=False)
 
   def kmeanspp(self, data):
     """
@@ -255,7 +257,7 @@ class KMeans(nn.Module):
 
     if self.distance == "euclidean":
       required = (m*n + max(m, n) + m*d + n*d) * data.element_size()
-    elif self.distance == "cosine":
+    elif self.distance in ["cosine", "inner"]:
       required = ((m*n) + (m+n)*(d+1)) * data.element_size()
     if remaining >= required:
       sims = self.sim(data, centroids, inplace=False) #[m, n]
@@ -279,7 +281,7 @@ class KMeans(nn.Module):
           sub_m = math.ceil(m / n_partitions)
           if self.distance == "euclidean":
             required = (sub_m*n + max(sub_m, n)) * data.element_size() + m*8 # +sub_m*d*4
-          elif self.distance == "cosine":
+          elif self.distance in ["cosine", "inner"]:
             required = (sub_m*n + sub_m+n) * data.element_size() + m*8# +sub_m*d*4
           if required < remaining:
             break
