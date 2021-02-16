@@ -3,8 +3,9 @@ import torch.nn as nn
 
 from .kmeans import MultiKMeans
 from .kernels import PQDecodeCUDA
+from .CustomModule import CustomModule
 
-class PQ(nn.Module):
+class PQ(CustomModule):
   def __init__(
       self,
       d_vector,

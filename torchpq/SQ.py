@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
+from .CustomModule import CustomModule
 
-class SQ(nn.Module):
+class SQ(CustomModule):
   """
   scalar qantizer
   Parameters:

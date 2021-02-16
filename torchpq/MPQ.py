@@ -6,8 +6,9 @@ from .kmeans import MultiKMeans
 from .kmeans import KMeans
 from .kernels import PQDecodeCUDA
 from .PQ import PQ
+from .CustomModule import CustomModule
 
-class MPQ(nn.Module):
+class MPQ(CustomModule):
   def __init__(
     self,
     d_vector,

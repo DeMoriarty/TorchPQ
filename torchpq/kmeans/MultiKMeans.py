@@ -6,8 +6,9 @@ from time import time
 
 from .kernels import MaxSimCUDA
 from .kernels import ComputeCentroidsCUDA
+from ..CustomModule import CustomModule
 
-class MultiKMeans(nn.Module):
+class MultiKMeans(CustomModule):
   """
   Run multiple independent K-means algorithms in parallel.
   Parameters:

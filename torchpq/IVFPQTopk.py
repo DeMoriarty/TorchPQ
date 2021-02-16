@@ -32,6 +32,21 @@ class IVFPQTopk:
       remaining = 0
     return remaining
 
+  def get_similarity(self, data, precomputed, is_empty, div_start, div_size):
+    max_out_size = div_size.sum(dim=1).max().item()
+    n_subvectors, n_query, n_clusters = precomputed.shape
+    n_probe = div_start.shape[1]
+
+    values, indices = self.compute_product(
+      data = data,
+      precomputed = precomputed,
+      is_empty = is_empty,
+      div_start = div_start,
+      div_size = div_size,
+      max_out_size = max_out_size,  
+    )
+    return values, indices
+
   def __call__(self, k, data, precomputed, is_empty, div_start, div_size):
     """
       k: dtype : int

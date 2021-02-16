@@ -244,6 +244,69 @@ class IVFPQ(IVFPQBase):
     recon = self.product_q.decode(code)
     return recon
     
+  def similarity_at_address(self, query, address):
+    """
+      computes similarity of each query and datapoint at each address
+      query: torch.Tensor, shape : [d_vector, n_query], dtype : float32
+      address: torch.Tensor, shape : [n_query, n_address], dtype : int64
+    """
+    assert self._is_trained == True, "module is not trained"
+    d_vector, n_query = query.shape
+    n_address = address.shape[1]
+    assert d_vector == self.d_vector
+    assert n_query == address.shape[0]
+
+    data = self.storage[:, address, :] #[n_subvectors//n_cs, n_query, n_address, n_cs]
+    data = data.reshape(
+      self.code_size // self.n_cs,
+      n_query * n_address,
+      self.n_cs
+    )
+    precomputed = self.product_q.precompute_adc(query)
+
+    is_empty = torch.zeros(
+      n_query * n_address,
+      device=self.device,
+      dtype=torch.uint8
+    )
+    div_start = torch.arange(
+      n_query,
+      device=self.device,
+      dtype=torch.int32
+    )[:, None] * n_address
+    div_size = torch.empty_like(div_start)
+    div_size.fill_(n_address)
+
+    values, indices = self._topk_fn.get_similarity(
+      data=data,
+      precomputed=precomputed,
+      is_empty=is_empty,
+      div_start=div_start,
+      div_size=div_size,
+    ) #[n_query, k]
+
+    indices = indices - div_start
+    values = torch.gather(values, index=indices.long(), dim=1)
+    return values
+
+    # address = torch.gather(address, index=indices.long(), dim=1)
+    # ids = self.get_id_of_address(address)
+    # values, ids
+
+  def similarity_at_id(self, query, ids):
+    """
+      computes similarity of queries and datapoints speicified by id
+      query: torch.Tensor, shape : [d_vector, n_query], dtype : float32
+      ids: torch.Tensor, shape : [n_query, n_id], dtype : int64
+    """
+    n_query, n_ids = ids.shape
+
+    ids = ids.reshape(n_query * n_ids)
+    address = self.get_address_of_id(ids)
+    address = address.reshape(n_query, n_ids)
+
+    return self.similarity_at_address(query, address)
+
   def topk(self, query, k, mode=2, return_address=False):
     """
       query: torch.Tensor, shape : [d_vector, n_query], dtype : float32

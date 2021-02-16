@@ -6,6 +6,8 @@ except ModuleNotFoundError:
 from . import kmeans
 from . import kernels
 
+from .CustomModule import CustomModule
+
 from .PQ import PQ
 from .MPQ import MPQ
 from .SQ import SQ

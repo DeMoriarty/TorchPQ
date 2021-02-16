@@ -7,8 +7,9 @@ from .kernels import GetDivOfAddressCUDA
 from .kernels import GetIOACUDA
 from .kernels import GetWriteAddressCUDA
 from .SQ import SQ
+from .CustomModule import CustomModule
 
-class IVFPQBase(nn.Module):
+class IVFPQBase(CustomModule):
   def __init__(
     self,
     d_vector,
@@ -95,8 +96,6 @@ class IVFPQBase(nn.Module):
       distance = "cosine"
     self.distance = distance
       
-    
-
     storage = torch.zeros(
       code_size // self.n_cs,
       blocksize * n_cq_clusters,
@@ -106,9 +105,9 @@ class IVFPQBase(nn.Module):
     )
 
     if cpu_quantizer is None:
-      cpu_storage = None
+      self.cpu_storage = None
     else:
-      cpu_storage = torch.zeros(
+      self.cpu_storage = torch.zeros(
         self.cpu_code_size,
         blocksize * n_cq_clusters,
         device="cpu",
@@ -140,7 +139,6 @@ class IVFPQBase(nn.Module):
       dtype=torch.long
     )
     self.register_buffer("storage", storage)
-    self.register_buffer("cpu_storage", cpu_storage)
     self.register_buffer("div_start", div_start)
     self.register_buffer("div_capacity",div_capacity)
     self.register_buffer("div_size", div_size)
@@ -251,6 +249,8 @@ class IVFPQBase(nn.Module):
           cpu_bytesize += p.numel() * p.element_size()
         elif p.device.type == "cuda":
           gpu_bytesize += p.numel() * p.element_size()
+    if self.cpu_storage is not None:
+      cpu_bytesize += self.cpu_storage.numel() * self.cpu_storage.element_size()
     return (cpu_bytesize, gpu_bytesize)
 
   def _get_address_of_id_old(self, ids):
@@ -400,6 +400,18 @@ class IVFPQBase(nn.Module):
       address = self.get_address_of_id(ids)
       self.set_cpu_data_of_address(data, address)
 
+  def save_cpu_data(self, path):
+    if self.cpu_quantizer is not None:
+      torch.save(self.cpu_storage, path)
+
+  def load_cpu_data(self, path):
+    if self.cpu_quantizer is not None:
+      self.cpu_storage = torch.load(path)
+
+  def load_data(self, path):
+    state_dict = torch.load(path)
+    self.load_state_dict(state_dict)
+
   def _get_ioa_old(self, labels, unique_labels=None):
     if unique_labels is None:
       unique_labels = torch.unique(labels) #[n_unique_clusters]
@@ -497,9 +509,9 @@ class IVFPQBase(nn.Module):
       # self.div_start[:] = self.div_capacity.cumsum(dim=0)
       tot += div_cap
     self.register_buffer("storage", storage)
-    self.register_buffer("cpu_storage", cpu_storage)
     self.register_buffer("address2id", address2id)
     self.register_buffer("is_empty", is_empty)
+    self.cpu_storage = cpu_storage
     if self.verbose > 1:
       print(f"Storage capacity is increased by {tot}, total capacity: {self.storage.shape[1]}")
   

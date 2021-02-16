@@ -6,8 +6,9 @@ from time import time
 
 from .kernels import MaxSimCUDA
 from .kernels import ComputeCentroidsCUDA
+from ..CustomModule import CustomModule
 
-class KMeans(nn.Module):
+class KMeans(CustomModule):
   """
   K-means clustering algorithm implemented with pytorch and CUDA
   Parameters:
