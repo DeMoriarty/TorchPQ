@@ -6,7 +6,7 @@ class CustomModule(nn.Module):
     super(CustomModule, self).__init__()
 
   def load_state_dict(self, state_dict):
-    for k, v in state_dict:
+    for k, v in state_dict.items():
       if "." not in k:
         assert hasattr(self, k), f"attribute {k} does not exist"
         delattr(self, k)
