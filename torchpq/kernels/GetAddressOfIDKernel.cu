@@ -12,10 +12,10 @@ __global__ void get_address_of_id(
 
   __shared__  volatile ll_t smem[_TPB_];
 
-  if (qid >= n_ids){
-    //return;
+  ll_t id = -1;
+  if (qid < n_ids){
+    id = ids[qid];
   }
-  ll_t id = ids[qid];
 
   int n_iter = (n_data + _TPB_ - 1) / _TPB_;
   for (int i=0; i<n_iter; i++){
@@ -24,14 +24,15 @@ __global__ void get_address_of_id(
       smem[tid] = address2id[nid];
     }
     __syncthreads();
+    if (qid < n_ids){
 #pragma unroll
-    for (int j=0; j<_TPB_; j++){
-      if (i * _TPB_ + j < n_data){
-        ll_t candidate = smem[j];
-        if (candidate == id){
-          // result[j] = (ll_t) nid;
-          address[qid] = (ll_t) (i * _TPB_ + j);
-          break;
+      for (int j=0; j<_TPB_; j++){
+        if (i * _TPB_ + j < n_data){
+          ll_t candidate = smem[j];
+          if (candidate == id){
+            address[qid] = (ll_t) (i * _TPB_ + j);
+            break;
+          }
         }
       }
     }
