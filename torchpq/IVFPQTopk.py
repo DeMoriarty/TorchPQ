@@ -101,11 +101,12 @@ class IVFPQTopk:
         max_out_size = sub_mos,  
       )
       del sub_precomputed
-      sorted_v, sorted_i = torch.topk(sub_v, dim=-1, k=k)
+      sub_k = min(k, sub_mos)
+      sorted_v, sorted_i = torch.topk(sub_v, dim=-1, k=sub_k)
       del sub_v
-      final_v[start:end] = sorted_v
+      final_v[start:end, :sub_k] = sorted_v
       del sorted_v
-      final_i[start:end] = torch.gather(input=sub_i, index=sorted_i, dim=1)
+      final_i[start:end, :sub_k] = torch.gather(input=sub_i, index=sorted_i, dim=1)
       del sub_i, sorted_i
 
     ### TEST

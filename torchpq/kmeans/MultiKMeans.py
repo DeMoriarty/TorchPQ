@@ -119,6 +119,10 @@ class MultiKMeans(CustomModule):
     return diff.sum()
 
   @staticmethod
+  def calculate_inertia(a):
+    return (-a).mean()
+
+  @staticmethod
   def cos_sim(a, b, normalize=True, inplace=False):
     """
       Compute batched cosine similarity between 'a' and 'b'
@@ -377,7 +381,7 @@ class MultiKMeans(CustomModule):
         new_centroids = self.compute_centroids(data, labels)
         error = self.calculate_error(centroids, new_centroids)
         centroids = new_centroids
-        inertia = torch.sum(1-maxsims)
+        inertia = self.calculate_inertia(maxsims)
         if self.verbose >= 3:
           print(f"----iteration {j} of {i}th redo, error={error.item()}, inertia={inertia.item()}")
         if error <= self.tol:
