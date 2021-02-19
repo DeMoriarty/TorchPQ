@@ -529,13 +529,9 @@ class IVFPQBase(CustomModule):
     """
     raise NotImplementedError("method needs to be overrided in child class")
 
-  def remove(self, remove_ids):
-    """
-      remove_ids: torch.Tensor, shape : [n_ids], dtype : int64
-    """
+  def remove_address(self, address):
     assert self._is_trained == True, "Module is not trained"
-    n_ids = remove_ids.shape[0]
-    address = self.get_address_of_id(remove_ids)
+    n_address = address.shape[0]
     address = address[address >= 0] #filter out -1 values
     divs = self.get_div_of_address(address)
 
@@ -545,8 +541,16 @@ class IVFPQBase(CustomModule):
     unique_divs, counts = divs.unique(return_counts=True)
     self.div_size[unique_divs] -= counts
     if self.verbose > 1:
-      print(f"{len(address)} items have been successfully removed, {n_ids - len(address)} items are ignored.")
+      print(f"{len(address)} items have been successfully removed, {n_address - len(address)} items are ignored.")
 
+  def remove(self, remove_ids):
+    """
+      remove_ids: torch.Tensor, shape : [n_ids], dtype : int64
+    """
+    assert self._is_trained == True, "Module is not trained"
+    address = self.get_address_of_id(remove_ids)
+    self.remove_address(address)
+    
   def train(self, input, force_retrain=False):
     """
       has to be overrided in child class

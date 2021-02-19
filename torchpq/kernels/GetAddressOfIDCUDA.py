@@ -35,7 +35,7 @@ class GetAddressOfIDCUDA(CustomKernel):
     """
     n_data = address2id.shape[0]
     n_ids = ids.shape[0]
-    address = torch.ones_like(ids) * -3
+    address = torch.ones_like(ids) * -1
 
     threads_per_block = (self.tpb,)
     blocks_per_grid = (math.ceil(n_ids/self.tpb), )

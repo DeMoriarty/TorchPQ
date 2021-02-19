@@ -130,10 +130,12 @@ class IVFPQ(IVFPQBase):
   def set_product_q_n_redo(self, value):
     self.product_q.kmeans.n_redo = value
 
-  def add(self, input, input_ids=None):
+  def add(self, input, input_ids=None, return_address=False):
     """
       input: torch.Tensor, shape : [n_data, d_vector], dtype : float32
       input_ids: torch.Tensor, shape : [n_data], dtype : int64
+      return_address: bool, default : False
+        if set to True, return the address of added items
     """
     assert self._is_trained == True, "Module is not trained"
     if self.distance == "cosine":
@@ -190,7 +192,10 @@ class IVFPQ(IVFPQBase):
     if self.verbose > 1:
       print(f"{n_data} new items added")
 
-    return input_ids
+    if return_address:
+      return (input_ids, write_address)
+    else:
+      return input_ids
 
   def train(self, input, force_retrain=False):
     """
