@@ -127,14 +127,13 @@ All experiments were performed with a Tesla T4 GPU.
 
 ### SIFT1M
 #### IVFPQ
-Faiss is one of the most well known ANN search libraries, and it also has a GPU implementation of IVFPQ, so we did some comparison experiments with faiss.  
+[Faiss](https://github.com/facebookresearch/faiss) is one of the most well known ANN search libraries, and it also has a GPU implementation of IVFPQ, so we did some comparison experiments with faiss.  
 <p float="left">
   <img src="/imgs/6.png" width="100%"/>
 </p>  
 
-- when n_probe > 16, torchpq outperforms faiss, when n_probe < 16, faiss is faster
-- when n_subvectors <= 16, faiss is generally faster.
-- for IVF4096, torchpq has lower recall@1 compared to faiss, could be caused by bugs in CUDA kernels.
+- for all the IVF16384 variants, torchpq outperforms faiss when n_probe > 16.
+- for IVF4096, torchpq has lower recall@1 compared to faiss, this could be caused by not encoding residuals. An option to encode residuals will be added soon.
 #### IVFPQ+R
 <p float="left">
   <img src="/imgs/tiny/1.png" width="49%"/>
