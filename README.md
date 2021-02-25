@@ -97,6 +97,7 @@ It ignores ids that doesn't exist.
 
 #### Topk search
 ```python
+index.n_probe = 32
 n_query = 10000
 query = torch.randn(d_vector, n_query, device="cuda:0")
 topk_values, topk_ids = index.topk(query, k=100)
