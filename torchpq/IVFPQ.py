@@ -345,7 +345,7 @@ class IVFPQ(IVFPQBase):
     )
     topk_ids = self.get_id_of_address(topk_address.long())
     if return_address:
-      return (topkv, topk_ids, topk_address)
+      return (topkv, topk_ids, topk_address.long())
     else:
       return (topkv, topk_ids)
       

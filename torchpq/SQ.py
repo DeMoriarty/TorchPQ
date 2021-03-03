@@ -123,7 +123,6 @@ class SQ(CustomModule):
       input: torch.Tensor, shape : [d_vector, n_data], dtype : float32
     """
     assert self.is_trained == True, "SQ is not trained"
-    input = input.to(self.range.device)
     if self.bits == 4:
       return self._encode_4bit(input)
     elif self.bits == 8:
@@ -138,7 +137,6 @@ class SQ(CustomModule):
       code: torch.Tensor, shape : [code_size, n_data], dtype : float32 / float16 / uint8
     """
     assert self.is_trained == True, "SQ is not trained"
-    code = code.to(self.range.device)
     if self.bits == 4:
       return self._decode_4bit(code)
     elif self.bits == 8:
