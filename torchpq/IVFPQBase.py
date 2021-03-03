@@ -3,9 +3,9 @@ import torch.nn as nn
 import numpy as np
 
 from .kernels import GetAddressOfIDCUDA
-from .kernels import GetDivOfAddressCUDA
+from .kernels import GetDivOfAddressV2CUDA
 from .kernels import GetIOACUDA
-from .kernels import GetWriteAddressCUDA
+from .kernels import GetWriteAddressV2CUDA
 from .SQ import SQ
 from .CustomModule import CustomModule
 
@@ -148,14 +148,14 @@ class IVFPQBase(CustomModule):
     self._get_address_of_id_cuda = GetAddressOfIDCUDA(
       tpb=256,
     )
-    self._get_div_of_address_cuda = GetDivOfAddressCUDA(
-      ta=1,
+    self._get_div_of_address_cuda = GetDivOfAddressV2CUDA(
+      ta=4,
       tpb=256,
     )
     self._get_ioa_cuda = GetIOACUDA(
       tpb=256,
     )
-    self._get_write_address_cuda = GetWriteAddressCUDA(
+    self._get_write_address_cuda = GetWriteAddressV2CUDA(
       tpb=256,
     )
 
@@ -436,15 +436,17 @@ class IVFPQBase(CustomModule):
       write_address[i] = write_adr
     return write_address
 
-  def get_write_address(self, empty_adr, labels, div_of_empty_adr=None, ioa=None):
-    if div_of_empty_adr is None:
-      div_of_empty_adr = self.get_div_of_address(empty_adr)
+  def get_write_address(self, labels, empty_adr=None, div_of_empty_adr=None, ioa=None):
     if ioa is None:
       ioa = self.get_ioa(labels)
 
     if labels.device.type == "cuda":
-      return self._get_write_address_cuda(empty_adr, div_of_empty_adr, labels, ioa)
+      #return self._get_write_address_cuda(empty_adr, div_of_empty_adr, labels, ioa)
+      return self._get_write_address_cuda(self.is_empty, self.div_start, self.div_size, labels, ioa)
     elif labels.device.type == "cpu":
+      if div_of_empty_adr is None:
+        div_of_empty_adr = self.get_div_of_address(empty_adr)
+      assert empty_adr is not None, "need empty_adr when device is cpu"
       return self._get_write_address_old(empty_adr, div_of_empty_adr, labels, ioa)
 
   def expand(self, clusters):
