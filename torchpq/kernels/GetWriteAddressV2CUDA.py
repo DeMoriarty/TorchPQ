@@ -5,13 +5,13 @@ import math
 from .CustomKernel import CustomKernel
 from torchpq.util import get_absolute_path
 
-class GetWriteAddressCUDA(CustomKernel):
+class GetWriteAddressV2CUDA(CustomKernel):
   def __init__(
       self,
       tpb=256,
       sm_size=48*256*4,
     ):
-    super(GetWriteAddressCUDA, self).__init__()
+    super(GetWriteAddressV2CUDA, self).__init__()
     self.tpb = tpb
     self.sm_size = sm_size
 
