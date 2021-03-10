@@ -159,7 +159,7 @@ class IVFPQ(IVFPQBase):
 
     #get write address
     empty_adr = torch.nonzero(self.is_empty == 1)[:, 0] #[n_empty]
-    div_of_empty_adr = self.get_div_of_address(empty_adr) #[n_empty]
+    # div_of_empty_adr = self.get_div_of_address(empty_adr) #[n_empty]
     write_address = self.get_write_address(
       empty_adr=empty_adr,
       labels=labels,

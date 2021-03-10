@@ -442,7 +442,7 @@ class IVFPQBase(CustomModule):
 
     if labels.device.type == "cuda":
       #return self._get_write_address_cuda(empty_adr, div_of_empty_adr, labels, ioa)
-      return self._get_write_address_cuda(self.is_empty, self.div_start, self.div_size, labels, ioa)
+      return self._get_write_address_cuda(self.is_empty, self.div_start, self.div_capacity, labels, ioa)
     elif labels.device.type == "cpu":
       if div_of_empty_adr is None:
         div_of_empty_adr = self.get_div_of_address(empty_adr)
