@@ -23,6 +23,9 @@ for a full list of cupy-cuda versions, please go to [Installation Guide](https:/
 ```python
 from torchpq import IVFPQ
 
+n_data = 1000000 # number of data points
+d_vector = 128 # dimentionality / number of features
+
 index = IVFPQ(
   d_vector=d_vector,
   n_subvectors=64,
@@ -32,7 +35,7 @@ index = IVFPQ(
   distance="euclidean",
 )
 
-x = torch.randn(d_vector, n_data)
+x = torch.randn(d_vector, n_data, device="cuda:0")
 index.train(x)
 ```
 There are some important parameters that need to be explained:
@@ -43,6 +46,8 @@ There are some important parameters that need to be explained:
 - **blocksize**: initial capacity assigned to each voronoi cell of coarse quantizer.
 `n_cq_clusters * blocksize` is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell will be automatically expanded.
 If you need to add vectors frequently, a larger value for `blocksize` is recommended.
+
+Remember that the shape of any tensor that contains data points has to be ```[d_vector, n_data]```.
 
 \* the second constraint could be removed in the future  
 \*\* actual byte size would be (n_subvectors+9) bytes, 8 bytes for ID and 1 byte for is_empty
