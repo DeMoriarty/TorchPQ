@@ -16,40 +16,6 @@ pip install torchpq
 for a full list of cupy-cuda versions, please go to [Installation Guide](https://docs.cupy.dev/en/stable/install.html#installing-cupy)
 
 ## Quick Start
-### K-means clustering
-```python
-from torchpq.kmeans import KMeans
-import torch
-
-n_data = 1000000 # number of data points
-d_vector = 128 # dimentionality / number of features
-x = torch.randn(d_vector, n_data, device="cuda")
-
-kmeans = KMeans(n_clusters=4096, distance="euclidean")
-labels = kmeans.fit(x)
-```
-Notice that the shape of the tensor that contains data points has to be ```[d_vector, n_data]```, this is consistant in TorchPQ.
-
-#### Multiple concurrent K-means
-Sometimes, we have multiple independent datasets that need to be clustered,
-instead of running multiple KMeans sequentianlly,
-we can perform multiple kmeans concurrently with **MultiKMeans**
-```python
-from torchpq.kmeans import MultiKMeans
-import torch
-
-n_data = 1000000
-n_kmeans = 16
-d_vector = 64
-x = torch.randn(n_kmeans, d_vector, n_data, device="cuda")
-kmeans = MultiKMeans(n_clusters=256, distance="euclidean")
-labels = kmeans.fit(x)
-```
-#### Prediction with K-means
-```
-labels = kmeans.predict(x)
-```
-
 ### IVFPQ
 **I**n**V**erted **F**ile **P**roduct **Q**uantization (IVFPQ) is a type of ANN search algorithm that is designed to do fast and efficient vector search in million, or even billion scale vector sets. check the [original paper](https://hal.inria.fr/inria-00514462v2/document) for more details.  
 
@@ -114,13 +80,47 @@ code = index.encode(query)   # compression
 reconstruction = index.decode(code) # reconstruction
 ```
 
-### Save and Load
+#### Save and Load
 Most of the TorchPQ modules are inherited from `torch.nn.Module`, this means you can save and load them just like a regular pytorch model.
 ```python
 # Save to PATH
 torch.save(index.state_dict(), PATH)
 # Load from PATH
 index.load_state_dict(torch.load(PATH))
+```
+### Clustering
+#### K-means
+```python
+from torchpq.kmeans import KMeans
+import torch
+
+n_data = 1000000 # number of data points
+d_vector = 128 # dimentionality / number of features
+x = torch.randn(d_vector, n_data, device="cuda")
+
+kmeans = KMeans(n_clusters=4096, distance="euclidean")
+labels = kmeans.fit(x)
+```
+Notice that the shape of the tensor that contains data points has to be ```[d_vector, n_data]```, this is consistant in TorchPQ.
+
+#### Multiple concurrent K-means
+Sometimes, we have multiple independent datasets that need to be clustered,
+instead of running multiple KMeans sequentianlly,
+we can perform multiple kmeans concurrently with **MultiKMeans**
+```python
+from torchpq.kmeans import MultiKMeans
+import torch
+
+n_data = 1000000
+n_kmeans = 16
+d_vector = 64
+x = torch.randn(n_kmeans, d_vector, n_data, device="cuda")
+kmeans = MultiKMeans(n_clusters=256, distance="euclidean")
+labels = kmeans.fit(x)
+```
+#### Prediction with K-means
+```
+labels = kmeans.predict(x)
 ```
 
 ## Benchmark
