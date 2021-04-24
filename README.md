@@ -56,7 +56,7 @@ Remember that the shape of any tensor that contains data points has to be ```[d_
 ids = torch.arange(n_data, device="cuda")
 index.add(x, input_ids=ids)
 ```
-Each ID in `ids` needs to be a unique int64 (`torch.long`) value that indentifies a vector in `x`.
+Each ID in `ids` needs to be a unique int64 (`torch.long`) value that identifies a vector in `x`.
 if `input_ids` is not provided, it will be set to `torch.arange(n_data, device="cuda") + previous_max_id`
 
 #### Removing vectors
@@ -138,8 +138,17 @@ All experiments were performed with a Tesla T4 GPU.
   <img src="/imgs/6.png" width="100%"/>
 </p>  
 
+**How to read the plot:**  
+- the plot format follows the style of [ann-benchmarks](http://ann-benchmarks.com/)
+- X axis is recall@1, Y axis is queries/second
+- the closer to the top right corner the better
+- indexes with same parameters from different libraries have similar colors.
+- different libraries have different line styles (TorchPQ is solid line with circle marker, faiss is dashed line with triangle marker)
+- each node on the line represents a different n_probe, starting from 1 at the left most node, and multiplied by 2 at the next node. (n_probe = 1,2,4,8,16,...)  
+  
+**Summary:**  
 - for all the IVF16384 variants, torchpq outperforms faiss when n_probe > 16.
-- for IVF4096, torchpq has lower recall@1 compared to faiss, this could be caused by not encoding residuals. An option to encode residuals will be added soon.
+- for IVF4096, torchpq has lower recall@1 compared to faiss, this could be caused by not encoding residuals. An option to encode residuals will be added soon.  
 #### IVFPQ+R
 <p float="left">
   <img src="/imgs/tiny/1.png" width="49%"/>
