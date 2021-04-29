@@ -2,18 +2,19 @@
 TorchPQ is a python library for **Approximate Nearest Neighbor Search** (ANNS) and **Maximum Inner Product Search** (MIPS) on GPU using **Product Quantization** (PQ) algorithm. TorchPQ is implemented mainly with PyTorch, with some extra CUDA kernels to accelerate clustering, indexing and searching.
 
 ## Install
-First install a version of CuPy library that matches your CUDA version
+- make sure you have the latest version of PyTorch installed: https://pytorch.org/get-started/locally/
+- install a version of CuPy library that matches your CUDA version
 ```
 pip install cupy-cuda90
 pip install cupy-cuda100
 pip install cupy-cuda101
 ...
 ```
-Then install TorchPQ
+for a full list of cupy-cuda versions, please go to [Installation Guide](https://docs.cupy.dev/en/stable/install.html#installing-cupy)
+- install TorchPQ
 ```
 pip install torchpq
 ```
-for a full list of cupy-cuda versions, please go to [Installation Guide](https://docs.cupy.dev/en/stable/install.html#installing-cupy)
 
 ## Quick Start
 ### IVFPQ
@@ -22,6 +23,7 @@ for a full list of cupy-cuda versions, please go to [Installation Guide](https:/
 #### Training
 ```python
 from torchpq import IVFPQ
+import torch
 
 n_data = 1000000 # number of data points
 d_vector = 128 # dimentionality / number of features
