@@ -135,7 +135,11 @@ All experiments were performed with a Tesla T4 GPU.
 
 ### SIFT1M
 #### IVFPQ
+
 [Faiss](https://github.com/facebookresearch/faiss) is one of the most well known ANN search libraries, and it also has a GPU implementation of IVFPQ, so we did some comparison experiments with faiss.  
+<details>
+  <summary>Click to show details</summary>
+  
 <p float="left">
   <img src="/imgs/6.png" width="100%"/>
 </p>  
@@ -151,21 +155,30 @@ All experiments were performed with a Tesla T4 GPU.
 **Summary:**  
 - for all the IVF16384 variants, torchpq outperforms faiss when n_probe > 16.
 - for IVF4096, torchpq has lower recall@1 compared to faiss, this could be caused by not encoding residuals. An option to encode residuals will be added soon.  
+</details>  
+
 #### IVFPQ+R
+<details>
+  <summary>Click to show details</summary>
+  
 <p float="left">
   <img src="/imgs/tiny/1.png" width="49%"/>
   <img src="/imgs/tiny/2.png" width="49%"/>
 </p>  
+</details>  
 
 ### GIST1M
 coming soon...
 
 ### K-Means
 Performing K-Means clustering on float32 data randomly sampled from normal distribution.  
-Number of iterations is set to 15.  
-Tolerance is set to 0 in order to perform full 15 iterations of K-Means  
-Initial centroids are randomly chosen from training data  
-All runs are performed on a Tesla T4 GPU  
+<details>  
+  <summary>Click to show details</summary>  
+  
+- Number of iterations is set to 15.   
+- Tolerance is set to 0 in order to perform full 15 iterations of K-Means   
+- Initial centroids are randomly chosen from training data   
+- All runs are performed on a Tesla T4 GPU   
 
 **Contestants**:
 - TorchPQ.kmeans.KMeans
@@ -174,20 +187,22 @@ All runs are performed on a Tesla T4 GPU
 
 #### n_features=256, n_clusters=256, varying n_data
 <p float="left">
-  <img src="/imgs/n_clusters=256 n_features=256.png" width="80%"/>
+  <img src="/imgs/n_clusters=256 n_features=256.png" width="100%"/>
 </p>  
 
 #### n_features=256, n_clusters=16384, varying n_data
 <p float="left">
-  <img src="/imgs/n_clusters=16384 n_features=256.png" width="80%"/>
+  <img src="/imgs/n_clusters=16384 n_features=256.png" width="100%"/>
 </p>  
 
 #### n_features=128, n_data=1,000,000, varying n_clusters
 <p float="left">
-  <img src="/imgs/n_data=1000000 n_features=128.png" width="80%"/>
+  <img src="/imgs/n_data=1000000 n_features=128.png" width="100%"/>
 </p>  
 
 #### n_clusters=1024, n_data=1,000,000, varying n_features
 <p float="left">
-  <img src="/imgs/n_data=1000000 n_clusters=1024.png" width="80%"/>
+  <img src="/imgs/n_data=1000000 n_clusters=1024.png" width="100%"/>
 </p>  
+note: faiss and keOps went OOM when n_features > 512
+</details>  
