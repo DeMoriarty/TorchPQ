@@ -215,7 +215,7 @@ class MultiKMeans(CustomModule):
       elif data.device.type == "cuda":
         max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=2, mode="tn")
       index = max_sims_v.argmin(dim=-1) #[l]
-      arange = torch.arange(l, device=device)
+      arange = torch.arange(l, device=data.device)
       new_centroid = data[arange, :, index] #[l, d_vector]
       centroids[:, :, i] = new_centroid
     if self.distance == "cosine":
