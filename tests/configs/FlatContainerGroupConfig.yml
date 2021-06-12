@@ -1,0 +1,15 @@
+code_size_list:
+- 16
+- 32
+- 64
+device_list:
+- cpu
+- cuda:0
+- cuda:0
+dtype_list:
+- int
+- float
+- half
+expand_mode: double
+initial_size: 128
+verbose: 2

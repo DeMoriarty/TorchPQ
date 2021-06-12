@@ -2,44 +2,43 @@ import numpy as np
 import yaml
 import torch
 
-class FlatContainerTestCase(CustomTestCase):
+class FlatContainerGroupTestCase(CustomTestCase):
   def setUp(self):
     doc = self.shortDescription()
     if (doc is None) or ("skip_test" not in doc):
-      with open("configs/FlatContainerConfig.yml", "r") as f:
+      with open("configs/FlatContainerGroupConfig.yml", "r") as f:
         config = yaml.load(f)
-      self.module = FlatContainer(
+      self.module = FlatContainerGroup(
         **config
       )
       self.device = self.module.device
-      self.dtype = self.module.dtype
 
   def tearDown(self):
     doc = self.shortDescription()
     if (doc is None) or ("skip_test" not in doc):
       del self.module
 
-  def create_data_randn(self, n_data):
-    return torch.randn(
-      self.module.code_size,
-      n_data,
-      device = self.module.device
-    ).to(self.module.dtype)
-
-  def create_data_rand(self, n_data):
-    return torch.rand(
-      self.module.code_size,
-      n_data,
-      device = self.module.device
-    ).to(self.module.dtype)
-
-  def create_data_randint(self, n_data, low=0, high=2**31):
-    return torch.randint(
-      low,
-      high,
-      size = [self.module.code_size, n_data],
-      device = self.module.device,
-    ).to(self.module.dtype)
+  def create_data(self, n_data):
+    data_list = []
+    for i in range(self.module.n_storage):
+      dtype = self.module.dtype_list[i]
+      device = self.module.device_list[i]
+      code_size = self.module.code_size_list[i]
+      if dtype in [torch.int32, torch.int64, torch.uint8]:
+        data = torch.randint(
+          2 ** 31,
+          size = [code_size, n_data],
+          device = device,
+          dtype = dtype
+        )
+      else:
+        data = torch.randn(
+          code_size, n_data,
+          device = device,
+          dtype = dtype
+        )
+      data_list.append(data)
+    return data_list
 
   def create_address(self, n_address):
     return torch.randint(
@@ -88,10 +87,10 @@ class FlatContainerTestCase(CustomTestCase):
 
   def test_add_with_ids(self):
     n_data = 10000
-    data = self.create_data_randn(n_data)
+    data_list = self.create_data(n_data)
     ids = self.create_ids_unique(n_data)
     returned_ids, returned_adr = self.module.add(
-      data,
+      data_list,
       ids=ids,
       return_address=True
     )
@@ -100,14 +99,19 @@ class FlatContainerTestCase(CustomTestCase):
     adr = self.module.get_address_by_id(ids)
     self.assertTensorEqual(adr, returned_adr)
 
-    returned_data = self.module.get_data_by_address(returned_adr)
-    self.assertTensorEqual(data, returned_data)
+    returned_data_list = self.module.get_data_by_address(returned_adr)
+    self.assertTrue(len(returned_data_list) == self.module.n_storage)
+    for i in range(self.module.n_storage):
+      with self.subTest(i = i):
+        returned_data = returned_data_list[i]
+        data = data_list[i]
+        self.assertTensorEqual(data, returned_data)
 
   def test_add_without_ids(self):
     n_data = 10000
-    data = self.create_data_randn(n_data)
+    data_list = self.create_data(n_data)
     returned_ids, returned_adr = self.module.add(
-      data,
+      data_list,
       return_address=True
     )
     ids = self.module.get_id_by_address(returned_adr)
@@ -116,30 +120,36 @@ class FlatContainerTestCase(CustomTestCase):
     adr = self.module.get_address_by_id(returned_ids)
     self.assertTensorEqual(adr, returned_adr)
 
-    returned_data = self.module.get_data_by_address(returned_adr)
-    self.assertTensorEqual(data, returned_data)
+    returned_data_list = self.module.get_data_by_address(returned_adr)
+    self.assertTrue(len(returned_data_list) == self.module.n_storage)
+    for i in range(self.module.n_storage):
+      with self.subTest(i = i):
+        returned_data = returned_data_list[i]
+        data = data_list[i]
+        self.assertTensorEqual(data, returned_data)
 
   def test_remove_by_address(self):
     n_data = 10000
-    data = self.create_data_randn(n_data)
+    data_list = self.create_data(n_data)
     ids = self.create_ids_unique(n_data)
     _, returned_adr = self.module.add(
-      data,
+      data_list,
       ids=ids,
       return_address=True
     )
 
     self.module.remove(address = returned_adr)
 
+    # ???
     returned_ids = self.module.get_id_by_address(returned_adr)
     self.assertTensorEqual(returned_ids, -1)
 
   def test_remove_by_ids(self):
     n_data = 10000
-    data = self.create_data_randn(n_data)
+    data_list = self.create_data(n_data)
     ids = self.create_ids_unique(n_data)
     _, returned_adr = self.module.add(
-      data,
+      data_list,
       ids=ids,
       return_address=True
     )
@@ -149,15 +159,16 @@ class FlatContainerTestCase(CustomTestCase):
     address = self.module.get_address_by_id(ids)
     self.assertTensorEqual(address, -1)
     
+    # ???
     returned_ids = self.module.get_id_by_address(returned_adr)
     self.assertTensorEqual(returned_ids, -1)
     
   def test_add_remove_interaction(self):
     n_data = 1000
-    data = self.create_data_randn(n_data)
+    data_list = self.create_data(n_data)
     ids = self.create_ids_unique(n_data)
     _, returned_adr = self.module.add(
-      data,
+      data_list,
       ids=ids,
       return_address=True
     )
@@ -170,14 +181,18 @@ class FlatContainerTestCase(CustomTestCase):
     remove_adr = returned_adr[remove_idx]
     self.module.remove(address = remove_adr)
 
-    new_data = self.create_data_randn(n_remove)
+    new_data_list = self.create_data(n_remove)
     new_ids, new_adr = self.module.add(
-      new_data,
+      new_data_list,
       return_address=True
     )
 
-    returned_new_data = self.module.get_data_by_address(new_adr)
-    self.assertTensorEqual(new_data, returned_new_data)
+    returned_new_data_list = self.module.get_data_by_address(new_adr)
+    for i in range(self.module.n_storage):
+      with self.subTest(i = i):
+        returned_new_data = returned_new_data_list[i]
+        new_data = new_data_list[i]
+        self.assertTensorEqual(new_data, returned_new_data)
 
     returned_new_ids = self.module.get_id_by_address(new_adr)
     self.assertTensorEqual(new_ids, returned_new_ids)
@@ -187,4 +202,5 @@ class FlatContainerTestCase(CustomTestCase):
     
   def test_empty(self):
     self.assertTrue(self.module.n_items == 0)
+    self.assertTensorEqual(self.module._address2id >= 0, 0)
     

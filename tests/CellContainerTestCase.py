@@ -200,6 +200,10 @@ class CellContainerTestCase(CustomTestCase):
       ids=ids,
       return_address=True
     )
+    # plt.vlines(self.module._cell_start.cpu(), ymin=0, ymax=1)
+    # plt.plot(self.module._is_empty.cpu(), ",")
+    # plt.show()
+
     n_remove = n_data // 2
     remove_idx = np.random.choice(
       n_data,
@@ -208,6 +212,10 @@ class CellContainerTestCase(CustomTestCase):
     remove_adr = returned_adr[remove_idx]
     self.module.remove(address = remove_adr)
 
+    # plt.vlines(self.module._cell_start.cpu(), ymin=0, ymax=1)
+    # plt.plot(self.module._is_empty.cpu(), ",")
+    # plt.show()
+
     new_data = self.create_data_randn(n_remove)
     new_cells = self.create_cells(n_remove)
     new_ids, new_adr = self.module.add(
@@ -215,7 +223,9 @@ class CellContainerTestCase(CustomTestCase):
       cells=new_cells,
       return_address=True
     )
-
+    # plt.vlines(self.module._cell_start.cpu(), ymin=0, ymax=1)
+    # plt.plot(self.module._is_empty.cpu(), ",")
+    # plt.show()
     returned_new_data = self.module.get_data_by_address(new_adr)
     self.assertTensorEqual(new_data, returned_new_data)
 
