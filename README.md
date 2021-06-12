@@ -162,8 +162,8 @@ All experiments were performed with a Tesla T4 GPU.
   <summary>Click to show details</summary>
   
 <p float="left">
-  <img src="/imgs/tiny/1.png" width="49%"/>
-  <img src="/imgs/tiny/2.png" width="49%"/>
+  <img src="/imgs/tiny/1.png" width="100%"/>
+  <img src="/imgs/tiny/2.png" width="100%"/>
 </p>  
 </details>  
 
