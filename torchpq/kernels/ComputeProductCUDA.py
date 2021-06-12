@@ -20,7 +20,7 @@ class ComputeProductCUDA(CustomKernel):
     self.n_cs = n_cs
     self.sm_size = sm_size
 
-    with open(get_absolute_path("kernels", "ComputeProductKernel.cu"), "r") as f:
+    with open(get_absolute_path("kernels", "cuda", "compute_product.cu"), "r") as f:
       self.kernel = f.read()
     
     cb1 = [f"      float Bval{i} = Bsh[(i * _NCS_ + {i}) * _K_ + int(Avals.d{i}) ];" for i in range(n_cs)]

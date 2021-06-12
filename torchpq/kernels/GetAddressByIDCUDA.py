@@ -5,17 +5,17 @@ import math
 from .CustomKernel import CustomKernel
 from torchpq.util import get_absolute_path
 
-class GetAddressOfIDCUDA(CustomKernel):
+class GetAddressByIDCUDA(CustomKernel):
   def __init__(
       self,
       tpb=256,
       sm_size=48*256*4,
     ):
-    super(GetAddressOfIDCUDA, self).__init__()
+    super(GetAddressByIDCUDA, self).__init__()
     self.tpb = tpb
     self.sm_size = sm_size
 
-    with open(get_absolute_path("kernels", "GetAddressOfIDKernel.cu"), "r") as f:
+    with open(get_absolute_path("kernels", "cuda","get_address_by_id.cu"), "r") as f:
       self.kernel = f.read()
     kernel = (self.kernel
       .replace("_TPB_", str(tpb))

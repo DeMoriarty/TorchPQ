@@ -15,7 +15,7 @@ class GetIOACUDA(CustomKernel):
     self.tpb = tpb
     self.sm_size = sm_size
 
-    with open(get_absolute_path("kernels", "GetIOAKernel.cu"), "r") as f:
+    with open(get_absolute_path("kernels", "cuda","get_ioa.cu"), "r") as f:
       self.kernel = f.read()
     kernel = (self.kernel
       .replace("_TPB_", str(tpb))

@@ -4,8 +4,8 @@ import numpy as np
 import math
 from time import time
 
-from .kernels import MaxSimCUDA
-from .kernels import ComputeCentroidsCUDA
+from ..kernels import MaxSimCUDA
+from ..kernels import ComputeCentroidsCUDA
 from ..CustomModule import CustomModule
 
 class KMeans(CustomModule):

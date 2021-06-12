@@ -17,7 +17,7 @@ class PQDecodeCUDA(CustomKernel):
     self.tpb = 256
     self.sm_size = td * tm * 256 * 4
 
-    with open(get_absolute_path("kernels", "PQDecodeKernel.cu"), "r") as f:
+    with open(get_absolute_path("kernels", "cuda", "pq_decode.cu"), "r") as f:
       self.kernel = f.read()
 
     kernel = (self.kernel

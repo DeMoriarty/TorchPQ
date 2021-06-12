@@ -15,7 +15,7 @@ class GetWriteAddressV2CUDA(CustomKernel):
     self.tpb = tpb
     self.sm_size = sm_size
 
-    with open(get_absolute_path("kernels", "GetWriteAddressV2Kernel.cu"), "r") as f:
+    with open(get_absolute_path("kernels", "cuda", "get_write_address_v2.cu"), "r") as f:
       self.kernel = f.read()
       
     kernel = (self.kernel

@@ -19,7 +19,7 @@ class ComputeCentroidsCUDA(CustomKernel):
     self.tpb = 256
     self.sm_size = sm_size
 
-    with open(get_absolute_path("kmeans", "kernels", "ComputeCentroidsKernel.cu"), "r") as f:
+    with open(get_absolute_path("kernels", "cuda", "compute_centroids.cu"), "r") as f:
       self.kernel = f.read()
 
     kernel = (self.kernel
