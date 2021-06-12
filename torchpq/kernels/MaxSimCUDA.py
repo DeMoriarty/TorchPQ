@@ -2,12 +2,13 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel
-from torchpq.util import get_absolute_path
 
-class MaxSimCUDA(CustomKernel): 
+from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
+
+class MaxSimCuda(CustomKernel): 
   def __init__(self, m=None, n=None, k=None, dim=None, distance="euclidean"):
-    super(MaxSimCUDA, self).__init__()
+    super(MaxSimCuda, self).__init__()
     self.m = m
     self.n = n
     self.k = k

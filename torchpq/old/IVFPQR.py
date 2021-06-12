@@ -2,9 +2,9 @@ import torch
 import numpy as np
 
 from .IVFPQBase import IVFPQBase
-from .kmeans import KMeans
 from .PQ import PQ
 from .IVFPQTopk import IVFPQTopk
+from ..clustering import KMeans
 
 class IVFPQR(IVFPQBase):
   def __init__(

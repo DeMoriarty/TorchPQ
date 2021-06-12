@@ -2,16 +2,17 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel
-from torchpq.util import get_absolute_path
 
-class PQDecodeCUDA(CustomKernel):
+from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
+
+class PQDecodeCuda(CustomKernel):
   def __init__(
       self,
       tm=2,
       td=8,
     ):
-    super(PQDecodeCUDA, self).__init__()
+    super(PQDecodeCuda, self).__init__()
     self.tm = tm
     self.td = td
     self.tpb = 256

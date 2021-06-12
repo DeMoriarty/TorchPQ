@@ -2,10 +2,11 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel
-from torchpq.util import get_absolute_path
 
-class ComputeProductCUDA(CustomKernel):
+from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
+
+class ComputeProductCuda(CustomKernel):
   def __init__(
       self,
       m=8,
@@ -13,7 +14,7 @@ class ComputeProductCUDA(CustomKernel):
       n_cs=4,
       sm_size=48*256*4,
     ):
-    super(ComputeProductCUDA, self).__init__()
+    super(ComputeProductCuda, self).__init__()
     self.m = m
     self.k = k
     self.tpb = 256

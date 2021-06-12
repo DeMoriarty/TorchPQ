@@ -2,16 +2,17 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel
-from torchpq.util import get_absolute_path
 
-class GetWriteAddressV2CUDA(CustomKernel):
+from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
+
+class GetWriteAddressV2Cuda(CustomKernel):
   def __init__(
       self,
       tpb=256,
       sm_size=48*256*4,
     ):
-    super(GetWriteAddressV2CUDA, self).__init__()
+    super(GetWriteAddressV2Cuda, self).__init__()
     self.tpb = tpb
     self.sm_size = sm_size
 

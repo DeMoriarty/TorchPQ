@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from .CustomModule import CustomModule
+from ..CustomModule import CustomModule
 
 class SQ(CustomModule):
   """

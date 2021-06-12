@@ -2,17 +2,18 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel
-from torchpq.util import get_absolute_path
 
-class GetDivByAddressCUDA(CustomKernel):
+from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
+
+class GetDivByAddressCuda(CustomKernel):
   def __init__(
       self,
       ta=1,
       tpb=256,
       sm_size=48*256*4,
     ):
-    super(GetDivByAddressCUDA, self).__init__()
+    super(GetDivByAddressCuda, self).__init__()
     self.ta = ta # how many clusters each thread is responsible of
     self.tpb = tpb
     self.sm_size = sm_size

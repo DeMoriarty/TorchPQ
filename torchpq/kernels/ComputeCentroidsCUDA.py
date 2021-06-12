@@ -2,17 +2,18 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel
-from torchpq.util import get_absolute_path
 
-class ComputeCentroidsCUDA(CustomKernel):
+from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
+
+class ComputeCentroidsCuda(CustomKernel):
   def __init__(
       self,
       de=16,
       dk=16,
       sm_size=48*256*4,
     ):
-    super(ComputeCentroidsCUDA, self).__init__()
+    super(ComputeCentroidsCuda, self).__init__()
     self.de = de
     self.dk = dk
     assert dk * (de + 1) * 4 <= sm_size

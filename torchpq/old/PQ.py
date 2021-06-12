@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from .kmeans import MultiKMeans
-from .kernels import PQDecodeCUDA
-from .CustomModule import CustomModule
+from ..clustering import MultiKMeans
+from ..kernels import PQDecodeCUDA
+from ..CustomModule import CustomModule
 
 class PQ(CustomModule):
   def __init__(

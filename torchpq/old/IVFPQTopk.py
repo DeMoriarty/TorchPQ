@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import math
-from .kernels import ComputeProductCUDA
+from ..kernels import ComputeProductCuda
 
 class IVFPQTopk:
   def __init__(self,
@@ -15,7 +15,7 @@ class IVFPQTopk:
     self.n_cs = n_cs
     self.sm_size = n_subvectors * 256 * 4
 
-    self.compute_product = ComputeProductCUDA(
+    self.compute_product = ComputeProductCuda(
       m=n_subvectors,
       k=n_clusters,
       n_cs=n_cs,

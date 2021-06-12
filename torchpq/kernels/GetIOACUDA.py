@@ -2,16 +2,17 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from .CustomKernel import CustomKernel
-from torchpq.util import get_absolute_path
 
-class GetIOACUDA(CustomKernel):
+from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
+
+class GetIOACuda(CustomKernel):
   def __init__(
       self,
       tpb=256,
       sm_size=48*256*4,
     ):
-    super(GetIOACUDA, self).__init__()
+    super(GetIOACuda, self).__init__()
     self.tpb = tpb
     self.sm_size = sm_size
 

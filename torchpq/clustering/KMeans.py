@@ -4,8 +4,8 @@ import numpy as np
 import math
 from time import time
 
-from ..kernels import MaxSimCUDA
-from ..kernels import ComputeCentroidsCUDA
+from ..kernels import MaxSimCuda
+from ..kernels import ComputeCentroidsCuda
 from ..CustomModule import CustomModule
 
 class KMeans(CustomModule):
@@ -72,7 +72,7 @@ class KMeans(CustomModule):
     self.register_buffer("centroids", None)
     
     if torch.cuda.is_available():
-      self.compute_centroids_cuda = ComputeCentroidsCUDA(
+      self.compute_centroids_cuda = ComputeCentroidsCuda(
         de=de,
         dk=dk,
         sm_size=sm_size,
@@ -82,7 +82,7 @@ class KMeans(CustomModule):
         distance = distance
       elif distance in ["cosine"]:
         distance = "inner"
-      self.max_sim_cuda = MaxSimCUDA(
+      self.max_sim_cuda = MaxSimCuda(
         dim=2,
         distance=distance,
       )

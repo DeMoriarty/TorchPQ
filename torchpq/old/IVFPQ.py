@@ -4,7 +4,7 @@ import numpy as np
 from .IVFPQBase import IVFPQBase
 from .IVFPQTopk import IVFPQTopk
 from .PQ import PQ
-from .kmeans import KMeans
+from ..clustering import KMeans
 
 class IVFPQ(IVFPQBase):
   def __init__(
