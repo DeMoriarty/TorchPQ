@@ -16,6 +16,9 @@ class IVFPQIndex(CellContainer):
       device='cuda:0',
       verbose=0,
     ):
+    max_sm_bytes = util.get_maximum_shared_memory_bytes()
+    assert n_subvectors <= max_sm_bytes // 1024
+
     super(IVFPQIndex, self).__init__(
       code_size = n_subvectors,
       n_cells = n_cells,
@@ -28,6 +31,7 @@ class IVFPQIndex(CellContainer):
       contiguous_size = 4,
       verbose = verbose,
     )
+
     self.d_vector = d_vector
     self.n_subvectors = n_subvectors
     self.verbose = verbose
@@ -163,11 +167,11 @@ class IVFPQIndex(CellContainer):
       x = util.normalize(x)
 
     assigned_cells = self.vq_codec.predict(x)
-    quantized_x = self.pq_codec.encode(x)
+    quantized_x = self.encode(x)
 
     return super(IVFPQIndex, self).add(
       quantized_x,
-      assigned_cells,
+      cells=assigned_cells,
       ids=ids,
       return_address = return_address
     )

@@ -54,8 +54,9 @@ class PQCodec(BaseCodec):
     d_vector, n_data = x.shape
     assert d_vector == self.d_vector
     x = x.reshape(self.n_subvectors, self.d_subvector, n_data)
-    self.kmeans.fit(x)
+    y = self.kmeans.fit(x)
     self._trained(True)
+    return y
 
   def precompute_adc(self, query):
     """

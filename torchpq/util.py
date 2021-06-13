@@ -40,6 +40,34 @@ def normalize(x, dim=0):
   x_norm = x.norm(dim=dim, keepdim=True) + 1e-9
   return x / x_norm
 
+def get_compute_capability(device_id=0):
+  """
+    return compute capability of GPU device
+  """
+  if torch.cuda.is_available():
+    # device_id = torch.cuda.current_device()
+    gpu_properties = torch.cuda.get_device_properties(device_id)
+    result = (gpu_properties.major, gpu_properties.minor)
+  else:
+    result = (-1, 0)
+  return result
+
+def get_maximum_shared_memory_bytes(device_id=0):
+  cc = get_compute_capability(device_id)
+  if cc[0] < 7 or cc == (7, 2):
+    y = 48
+  elif cc == (7, 0):
+    y = 96
+  elif cc == (7, 5):
+    y = 64
+  elif cc == (8, 0):
+    y = 163
+  elif cc == (8, 6):
+    y = 99
+  else:
+    y = 0
+  return y * 1024
+
 def check_dtype(tensor, *dtype):
   dtype = [util._str2dtype(i) if type(i) == str else i for i in dtype]
   return tensor.dtype in dtype
