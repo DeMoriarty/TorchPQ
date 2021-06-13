@@ -1,6 +1,7 @@
 import numpy as np
 import yaml
 import torch
+from torchpq.container import FlatContainerGroup
 
 class FlatContainerGroupTestCase(CustomTestCase):
   def setUp(self):

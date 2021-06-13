@@ -132,7 +132,7 @@ class IVFPQ(IVFPQBase):
 
   def add(self, input, input_ids=None, return_address=False):
     """
-      input: torch.Tensor, shape : [n_data, d_vector], dtype : float32
+      input: torch.Tensor, shape : [d_vector, n_data], dtype : float32
       input_ids: torch.Tensor, shape : [n_data], dtype : int64
       return_address: bool, default : False
         if set to True, return the address of added items

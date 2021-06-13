@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import yaml
+from torchpq.container import CellContainer
 
 class CellContainerTestCase(CustomTestCase):
   def setUp(self):

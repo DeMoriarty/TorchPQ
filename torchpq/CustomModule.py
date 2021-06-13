@@ -5,6 +5,12 @@ class CustomModule(nn.Module):
   def __init__(self):
     super(CustomModule, self).__init__()
 
+  def print_message(text, min_verbosity=0):
+    if hasattr(self, "verbose"):
+      if self.verbose < min_verbosity:
+        return
+    print(f"{self.__name__}: {text}")
+
   def load_state_dict(self, state_dict):
     for k, v in state_dict.items():
       if "." not in k:

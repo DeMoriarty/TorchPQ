@@ -416,8 +416,7 @@ class CellContainer(BaseContainer):
     # update number of stored items in each cell
     self._cell_size[unique_cells] += unique_cell_counts
 
-    if self.verbose > 1:
-      print(f"{n_data} new items added")
+    self.print_message(f"{n_data} new items added", 1)
 
     if return_address:
       return (ids, write_address)

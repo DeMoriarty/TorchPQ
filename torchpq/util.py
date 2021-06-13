@@ -33,6 +33,13 @@ def check_device(tensor, *device):
   device = [torch.device(i) if type(i) == str else i for i in device]
   return tensor.device in device
 
+def normalize(x, dim=0):
+  """
+    normalize given tensor along given dimention
+  """
+  x_norm = x.norm(dim=dim, keepdim=True) + 1e-9
+  return x / x_norm
+
 def check_dtype(tensor, *dtype):
   dtype = [util._str2dtype(i) if type(i) == str else i for i in dtype]
   return tensor.dtype in dtype

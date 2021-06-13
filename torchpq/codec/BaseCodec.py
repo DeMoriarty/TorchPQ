@@ -11,6 +11,10 @@ class BaseCodec(CustomModule, ABC):
     assert type(value) == bool
     self._is_trained.data = torch.tensor(value)
 
+  @property
+  def is_trained(self):
+    return self._is_trained.item()
+
   @abstractmethod
   def train(self):
     pass

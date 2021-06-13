@@ -1,4 +1,5 @@
 import unittest
+import torch
 
 class CustomTestCase(unittest.TestCase):
   def assertTensorEqual(self, a, b):
