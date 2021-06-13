@@ -16,8 +16,10 @@ class IVFPQIndex(CellContainer):
       device='cuda:0',
       verbose=0,
     ):
-    max_sm_bytes = util.get_maximum_shared_memory_bytes()
-    assert n_subvectors <= max_sm_bytes // 1024
+    if torch.device(device).type == "cuda":
+      assert torch.cuda.is_available(), "cuda is not available"
+      max_sm_bytes = util.get_maximum_shared_memory_bytes()
+      assert n_subvectors <= max_sm_bytes // 1024
 
     super(IVFPQIndex, self).__init__(
       code_size = n_subvectors,

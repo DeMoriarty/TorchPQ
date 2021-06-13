@@ -1,4 +1,5 @@
 from os import path
+import torch
 
 def get_absolute_path(*relative_path):
   relative_path = path.join(*relative_path)
@@ -69,5 +70,5 @@ def get_maximum_shared_memory_bytes(device_id=0):
   return y * 1024
 
 def check_dtype(tensor, *dtype):
-  dtype = [util._str2dtype(i) if type(i) == str else i for i in dtype]
+  dtype = [str2dtype(i) if type(i) == str else i for i in dtype]
   return tensor.dtype in dtype
