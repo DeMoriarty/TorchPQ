@@ -1,7 +1,7 @@
 typedef long long ll_t;
 
 extern "C"
-__global__ void get_address_of_id(
+__global__ void get_address_by_id(
   const ll_t* __restrict__ address2id,
   const ll_t* __restrict__ ids,
   ll_t* __restrict__ address,

@@ -27,7 +27,7 @@ class GetDivByAddressCuda(CustomKernel):
 
     self.fn = cp.RawKernel(
       kernel,
-      'get_div_of_address',
+      'get_div_by_address',
       backend='nvcc',
       # options=('--maxrregcount=255',),
     )

@@ -1,7 +1,7 @@
 typedef long long ll_t;
 
 extern "C"
-__global__ void get_div_of_address(
+__global__ void get_div_by_address(
   const ll_t* __restrict__ address,
   const ll_t* __restrict__ divStart,
   const ll_t* __restrict__ divEnd,
