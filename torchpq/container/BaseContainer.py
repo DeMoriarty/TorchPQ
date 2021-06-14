@@ -1,6 +1,6 @@
 #@title BaseContainer
 import torch
-from abc import ABC
+from abc import ABC, abstractmethod
 from .. import util
 from ..kernels import GetAddressByIDCuda
 from ..CustomModule import CustomModule

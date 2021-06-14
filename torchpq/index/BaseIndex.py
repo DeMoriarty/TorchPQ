@@ -1,5 +1,5 @@
 import torch
-from abc import ABC
+from abc import ABC, abstractmethod
 from ..CustomModule import CustomModule
 
 class BaseIndex(CustomModule, ABC):

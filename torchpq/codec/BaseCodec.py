@@ -1,6 +1,6 @@
 import torch
 from ..CustomModule import CustomModule
-from abc import ABC
+from abc import ABC, abstractmethod
 
 class BaseCodec(CustomModule, ABC):
   def __init__(self):
