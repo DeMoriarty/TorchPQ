@@ -5,6 +5,7 @@ from .BaseCodec import BaseCodec
 
 class VQCodec(BaseCodec):
   def __init__(self, *args, **kwargs):
+    super(VQCodec, self).__init__()
     self.kmeans = KMeans(
       *args,
       **kwargs
