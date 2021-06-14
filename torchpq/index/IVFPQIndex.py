@@ -171,7 +171,7 @@ class IVFPQIndex(CellContainer):
     if self.distance == "cosine":
       x = util.normalize(x)
 
-    assigned_cells = self.vq_codec.predict(x)
+    assigned_cells = self.vq_codec.encode(x)
     quantized_x = self.encode(x)
 
     return super(IVFPQIndex, self).add(
