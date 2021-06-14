@@ -5,11 +5,6 @@
 
 #define _VOLATILE_  
 
-#define likely(x)      __builtin_expect(!!(x), 1)
-#define unlikely(x)    __builtin_expect(!!(x), 0)
-#define load(x)        __ldcg(x)
-#define store(x, value) __stcs(x, value)
-
 typedef long long ll_t;
 typedef unsigned long long ull_t;
 
