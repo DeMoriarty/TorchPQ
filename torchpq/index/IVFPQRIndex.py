@@ -1,4 +1,7 @@
 from .BaseIndex import BaseIndex
+from ..container import CellContainer
+from ..codec import PQCodec, VQCodec
+from .. import util
 
 class IVFPQRIndex(CellContainer):
   def __init__(
