@@ -1,7 +1,6 @@
 import torch
 
 from ..kmeans import KMeans
-from ..kernels import PQDecodeCUDA
 from .BaseCodec import BaseCodec
 
 class VQCodec(BaseCodec):

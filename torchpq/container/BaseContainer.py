@@ -2,7 +2,7 @@
 import torch
 from abc import ABC
 from .. import util
-from ..kernels import GetAddressOfIDCUDA
+from ..kernels import GetAddressByIDCuda
 from ..CustomModule import CustomModule
 
 class BaseContainer(CustomModule, ABC):
@@ -35,7 +35,7 @@ class BaseContainer(CustomModule, ABC):
     self.register_buffer("_address2id", _address2id)
     self.register_buffer("_id2address", None)
 
-    self._get_address_by_id_cuda = GetAddressOfIDCUDA(
+    self._get_address_by_id_cuda = GetAddressByIDCuda(
       tpb=256
     )
 

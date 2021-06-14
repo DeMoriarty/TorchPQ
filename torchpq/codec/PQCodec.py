@@ -1,7 +1,7 @@
 import torch
 
 from ..kmeans import MultiKMeans
-from ..kernels import PQDecodeCUDA
+from ..kernels import PQDecodeCuda
 from .BaseCodec import BaseCodec
 
 class PQCodec(BaseCodec):
@@ -30,7 +30,7 @@ class PQCodec(BaseCodec):
       verbose = verbose,
     )
 
-    self._decode_cuda = PQDecodeCUDA(tm=2, td=8)
+    self._decode_cuda = PQDecodeCuda(tm=2, td=8)
 
   @property
   def codebook(self):

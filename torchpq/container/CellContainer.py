@@ -1,9 +1,9 @@
 #@title CellContainer
 import torch
 from .. import util
-from ..kernels import GetDivOfAddressV2CUDA
+from ..kernels import GetDivByAddressV2Cuda
 from ..kernels import GetIOACUDA
-from ..kernels import GetWriteAddressV2CUDA
+from ..kernels import GetWriteAddressV2Cuda
 from .BaseContainer import BaseContainer
 
 class CellContainer(BaseContainer):
@@ -78,14 +78,14 @@ class CellContainer(BaseContainer):
     )
     self.register_buffer("_is_empty", _is_empty)
 
-    self._get_cell_by_address_cuda = GetDivOfAddressV2CUDA(
+    self._get_cell_by_address_cuda = GetDivByAddressV2Cuda(
       ta=4,
       tpb=256,
     )
     self._get_ioa_cuda = GetIOACUDA(
       tpb=256,
     )
-    self._get_write_address_cuda = GetWriteAddressV2CUDA(
+    self._get_write_address_cuda = GetWriteAddressV2Cuda(
       tpb=256,
     )
 
