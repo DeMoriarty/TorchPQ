@@ -5,7 +5,7 @@ class CustomModule(nn.Module):
   def __init__(self):
     super(CustomModule, self).__init__()
 
-  def print_message(text, min_verbosity=0):
+  def print_message(self, text, min_verbosity=0):
     if hasattr(self, "verbose"):
       if self.verbose < min_verbosity:
         return
