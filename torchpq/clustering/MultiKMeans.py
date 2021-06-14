@@ -4,8 +4,8 @@ import numpy as np
 import math
 from time import time
 
-from .kernels import MaxSimCuda
-from .kernels import ComputeCentroidsCuda
+from ..kernels import MaxSimCuda
+from ..kernels import ComputeCentroidsCuda
 from ..CustomModule import CustomModule
 
 class MultiKMeans(CustomModule):
