@@ -243,6 +243,7 @@ class CellContainer(BaseContainer):
     self._cell_size.fill_(0)
     self._is_empty.fill_(1)
     self._n_items = 0
+    self.print_message("index has been empties", 2)
 
   def __expand_v2(self):
     storage = self._storage
@@ -366,8 +367,7 @@ class CellContainer(BaseContainer):
     self.register_buffer("_storage", storage)
     self.register_buffer("_address2id", address2id)
     self.register_buffer("_is_empty", is_empty)
-    if self.verbose > 1:
-      print(f"Total storage capacity is expanded by {total} for {n_cells} cells")
+    self.print_message(f"Total storage capacity is expanded by {total} for {n_cells} cells", 2)
 
   def add(self, data, cells, ids=None, return_address=False):
     assert util.check_dtype(data, self.dtype)
@@ -382,6 +382,7 @@ class CellContainer(BaseContainer):
       assert util.check_dtype(ids, torch.int64)
       assert ids.shape[0] == n_data
       ids = ids.to(self.device)
+      
     else:
       ids = torch.arange(
         n_data,
@@ -435,7 +436,9 @@ class CellContainer(BaseContainer):
     mask = (address >= 0) & (address < self.capacity)
     address = address[mask].unique(sorted=True)
     n_removed = address.shape[0]
-    assert n_removed <= self.n_items
+    if n_removed <= self.n_items:
+      self.print_message("no enough items in index to be removed", 1)
+      return
     if n_removed == 0:
       return
 
@@ -445,3 +448,4 @@ class CellContainer(BaseContainer):
     cells = self.get_cell_by_address(address)
     unique_cells, counts = cells.unique(return_counts = True)
     self._cell_size[unique_cells] -= counts
+    self.print_message(f"{n_removed} items has been removed", 2)

@@ -80,7 +80,7 @@ class IVFPQIndex(CellContainer):
   def train(self, x, force_retrain = False):
     if self.vq_codec.is_trained and self.pq_codec.is_trained:
       if not force_retrain:
-        self.print_message("index is already trained")
+        self.print_message("index is already trained", 1)
         return
     assert len(x.shape) == 2
     assert x.shape[0] == self.d_vector
@@ -88,13 +88,13 @@ class IVFPQIndex(CellContainer):
       x = util.normalize(x, dim=0)
     d_vector, n_data = x.shape
 
-    self.print_message("start training VQ codec...")
+    self.print_message("start training VQ codec...", 1)
     self.vq_codec.train(x)
 
-    self.print_message("start training PQ codec...")
+    self.print_message("start training PQ codec...", 1)
     self.pq_codec.train(x)
 
-    self.print_message("index is trained successfully!")
+    self.print_message("index is trained successfully!", 1)
   
   def encode(self, x):
     """

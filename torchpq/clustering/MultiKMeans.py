@@ -236,13 +236,11 @@ class MultiKMeans(CustomModule):
         replace=False
       )
       centroids = data[:, :, random_index]
-      if self.verbose >= 1:
-        print("centroids are randomly initialized.")
+      self.print_message("centroids are randomly initialized", 1)
 
     elif self.init_mode == "kmeans++":
       centroids = self.kmeanspp(data)
-      if self.verbose >= 1:
-        print("kmeans++ initialization is done!")
+      self.print_message("kmeans++ initialization is done!", 1)
     return centroids
 
   def get_labels(self, data, centroids):
@@ -382,8 +380,7 @@ class MultiKMeans(CustomModule):
         error = self.calculate_error(centroids, new_centroids)
         centroids = new_centroids
         inertia = self.calculate_inertia(maxsims)
-        if self.verbose >= 3:
-          print(f"----iteration {j} of {i}th redo, error={error.item()}, inertia={inertia.item()}")
+        self.print_message(f"----iteration {j} of {i}th redo, error={error.item()}, inertia={inertia.item()}", 3)
         if error <= self.tol:
           break
 
@@ -392,12 +389,10 @@ class MultiKMeans(CustomModule):
         best_error = error
         best_labels = labels
         best_inertia = inertia
-      if self.verbose >= 2:
-        print(f"--{i}th redo finished, error: {error.item()}, inertia: {inertia.item()}time spent:{round(time()-tm_i, 4)} sec")
+      self.print_message(f"--{i}th redo finished, error: {error.item()}, inertia: {inertia.item()}time spent:{round(time()-tm_i, 4)} sec", 2)
 
     self.register_buffer("centroids", best_centroids)
-    if self.verbose >= 1:
-      print(f"finished {self.n_redo} redos in {round(time()-tm, 4)} sec, final_inertia: {best_inertia}")
+    self.print_message(f"finished {self.n_redo} redos in {round(time()-tm, 4)} sec, final_inertia: {best_inertia}", 1)
     return best_labels
 
   def predict(self, query):
