@@ -1,6 +1,6 @@
 import torch
 
-from ..kmeans import KMeans
+from ..clustering import KMeans
 from .BaseCodec import BaseCodec
 
 class VQCodec(BaseCodec):

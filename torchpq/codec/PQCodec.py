@@ -1,6 +1,6 @@
 import torch
 
-from ..kmeans import MultiKMeans
+from ..clustering import MultiKMeans
 from ..kernels import PQDecodeCuda
 from .BaseCodec import BaseCodec
 
