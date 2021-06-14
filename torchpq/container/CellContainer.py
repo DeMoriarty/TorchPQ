@@ -2,7 +2,7 @@
 import torch
 from .. import util
 from ..kernels import GetDivByAddressV2Cuda
-from ..kernels import GetIOACUDA
+from ..kernels import GetIOACuda
 from ..kernels import GetWriteAddressV2Cuda
 from .BaseContainer import BaseContainer
 
@@ -82,7 +82,7 @@ class CellContainer(BaseContainer):
       ta=4,
       tpb=256,
     )
-    self._get_ioa_cuda = GetIOACUDA(
+    self._get_ioa_cuda = GetIOACuda(
       tpb=256,
     )
     self._get_write_address_cuda = GetWriteAddressV2Cuda(
