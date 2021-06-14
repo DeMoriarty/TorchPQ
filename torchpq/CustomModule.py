@@ -9,7 +9,7 @@ class CustomModule(nn.Module):
     if hasattr(self, "verbose"):
       if self.verbose < min_verbosity:
         return
-    print(f"{self.__name__}: {text}")
+    print(f"{type(self).__name__}: {text}")
 
   def load_state_dict(self, state_dict):
     for k, v in state_dict.items():
