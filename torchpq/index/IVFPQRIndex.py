@@ -44,6 +44,7 @@ class IVFPQRIndex(CellContainer):
     self.n_subvectors_rerank = n_subvectors_rerank
     self.use_residual = use_residual
     self.verbose = verbose
+    self.distance = distance
 
     self.vq_codec = VQCodec(
       n_clusters = n_cells,

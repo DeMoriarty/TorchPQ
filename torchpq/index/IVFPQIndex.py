@@ -38,6 +38,7 @@ class IVFPQIndex(CellContainer):
 
     self.d_vector = d_vector
     self.n_subvectors = n_subvectors
+    self.distance = distance
     self.verbose = verbose
 
     self.vq_codec = VQCodec(
