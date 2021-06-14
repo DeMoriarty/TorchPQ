@@ -114,7 +114,7 @@ class IVFPQIndex(CellContainer):
     return y
 
   def decode(self, x):
-     """
+    """
       Decode `x` with PQ codec
       x:
         torch.Tensor

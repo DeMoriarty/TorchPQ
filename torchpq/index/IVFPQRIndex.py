@@ -146,7 +146,7 @@ class IVFPQRIndex(CellContainer):
     return y
 
   def decode(self, x):
-     """
+    """
       Decode `x` with PQ and PQ Rerank codecs
       x:
         torch.Tensor
