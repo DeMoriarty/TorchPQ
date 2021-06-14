@@ -9,5 +9,7 @@ from . import transform
 from . import clustering
 from . import kernels
 from . import experimental
+from . import metric
+from . import util
 
 from .CustomModule import CustomModule
