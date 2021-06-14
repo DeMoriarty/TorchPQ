@@ -1,3 +1,5 @@
+import torch
+import numpy as np
 from .BaseIndex import BaseIndex
 
 class FlatIndex(BaseIndex):

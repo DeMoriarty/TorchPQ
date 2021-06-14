@@ -1,6 +1,6 @@
 import torch
+import numpy as np
 from ..CustomModule import CustomModule
-
 class PCA(CustomModule):
   def __init__(self, n_components):
     """
