@@ -17,6 +17,8 @@ class TopkBMMCuda(CustomKernel):
       dist_fn = "madd"
     elif distance in ["l2", "euclidean"]:
       dist_fn = "squared_l2"
+    elif distance in ["nl2", "negativel2","negative_euclidean"]:
+      dist_fn = "negative_squared_l2"
     elif distance in ["l1", "manhattan"]:
       dist_fn = "l1"
     else:
