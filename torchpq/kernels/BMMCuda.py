@@ -3,6 +3,7 @@ import cupy as cp
 import numpy as np
 import math
 from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
 
 class BMMCuda(CustomKernel): 
   def __init__(self, patch_m=4, patch_n=4):
@@ -10,10 +11,10 @@ class BMMCuda(CustomKernel):
     self.patch_m = patch_m
     self.patch_n = patch_n
     
-    with open("kernels/bmm_helpers.cu", "r") as f:
+    with open(get_absolute_path("kernels", "cuda", "bmm_helpers.cu"), "r") as f:
       helpers = f.read()
-
-    with open("kernels/bmm.cu",'r') as f: ###
+    
+    with open(get_absolute_path("kernels", "cuda", "bmm.cu"),'r') as f: ###
       self.kernel = helpers + f.read()
       
     self.kernel = (self.kernel

@@ -3,6 +3,7 @@ import cupy as cp
 import numpy as np
 import math
 from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
 
 class MBMMCuda(CustomKernel): 
   def __init__(self,
@@ -14,9 +15,9 @@ class MBMMCuda(CustomKernel):
     assert type(share_mask) == bool
     self.patch_m = patch_m
     self.patch_n = patch_n
-    self.share_mask = share_mask
-    with open("kernels/mbmm_kernel.cu",'r') as f: ###
-      self.kernel = f.read()
+    self.share_mask = share_mask    
+    with open(get_absolute_path("kernels", "cuda", "mbmm.cu"),'r') as f: ###
+      self.kernel = helpers + f.read()
       
     self.kernel = (self.kernel
       .replace("_PM_", str(self.patch_m))

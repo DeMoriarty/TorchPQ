@@ -3,6 +3,7 @@ import cupy as cp
 import numpy as np
 import math
 from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
 
 class MinBMMCuda(CustomKernel): 
   def __init__(self, patch_m=4, patch_n=4, distance="inner"):
@@ -20,10 +21,10 @@ class MinBMMCuda(CustomKernel):
 
     self.distance = distance
     
-    with open("kernels/bmm_helpers.cu", "r") as f:
+    with open(get_absolute_path("kernels", "cuda", "bmm_helpers.cu"), "r") as f:
       helpers = f.read()
     
-    with open("kernels/minbmm.cu",'r') as f: ###
+    with open(get_absolute_path("kernels", "cuda", "minbmm.cu"),'r') as f: ###
       self.kernel = helpers + f.read()
       
     self.kernel = (self.kernel

@@ -3,6 +3,7 @@ import cupy as cp
 import numpy as np
 import math
 from .CustomKernel import CustomKernel
+from ..util import get_absolute_path
 
 class TopkBMMCuda(CustomKernel): 
   def __init__(
@@ -23,10 +24,10 @@ class TopkBMMCuda(CustomKernel):
 
     self.distance = distance
 
-    with open("kernels/bmm_helpers.cu",'r') as f: ###
+   with open(get_absolute_path("kernels", "cuda", "bmm_helpers.cu"), "r") as f:
       helpers = f.read()
     
-    with open("kernels/topkbmm.cu",'r') as f: ###
+    with open(get_absolute_path("kernels", "cuda", "topkbmm.cu"),'r') as f: ###
       self.kernel = helpers + f.read()
       
     self.kernel = (self.kernel
