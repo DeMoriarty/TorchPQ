@@ -24,7 +24,7 @@ class TopkBMMCuda(CustomKernel):
 
     self.distance = distance
 
-   with open(get_absolute_path("kernels", "cuda", "bmm_helpers.cu"), "r") as f:
+    with open(get_absolute_path("kernels", "cuda", "bmm_helpers.cu"), "r") as f:
       helpers = f.read()
     
     with open(get_absolute_path("kernels", "cuda", "topkbmm.cu"),'r') as f: ###
