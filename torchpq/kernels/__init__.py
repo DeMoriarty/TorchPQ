@@ -11,3 +11,7 @@ from .PQDecodeCuda import PQDecodeCuda
 from .ComputeCentroidsCuda import ComputeCentroidsCuda
 from .ComputeProductCuda import ComputeProductCuda
 from .MaxSimCuda import MaxSimCuda
+
+from .BMMCuda import BMMCuda
+from .MinBMMCuda import MinBMMCuda
+from .TopkBMMCuda import TopkBMMCuda
