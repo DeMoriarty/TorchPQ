@@ -235,11 +235,11 @@ class MultiKMeans(CustomModule):
         size=[self.n_clusters],
         replace=False
       )
-      centroids = data[:, :, random_index]
+      centroids = data[:, :, random_index].clone()
       self.print_message("centroids are randomly initialized", 1)
 
     elif self.init_mode == "kmeans++":
-      centroids = self.kmeanspp(data)
+      centroids = self.kmeanspp(data).clone()
       self.print_message("kmeans++ initialization is done!", 1)
     return centroids
 
