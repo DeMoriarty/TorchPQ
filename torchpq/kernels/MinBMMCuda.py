@@ -2,7 +2,7 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from custom_kernel import CustomKernel
+from .CustomKernel import CustomKernel
 
 class MinBMMCuda(CustomKernel): 
   def __init__(self, patch_m=4, patch_n=4, distance="inner"):

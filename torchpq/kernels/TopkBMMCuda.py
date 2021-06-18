@@ -2,7 +2,7 @@ import torch
 import cupy as cp
 import numpy as np
 import math
-from custom_kernel import CustomKernel
+from .CustomKernel import CustomKernel
 
 class TopkBMMCuda(CustomKernel): 
   def __init__(
