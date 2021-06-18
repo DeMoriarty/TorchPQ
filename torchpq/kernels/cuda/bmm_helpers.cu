@@ -620,3 +620,4 @@ __device__ void buffer2smem_16_tn(
     bSM[wy+8][wx+i*32+i] = bBuffer2[i];
   }
 }
+
