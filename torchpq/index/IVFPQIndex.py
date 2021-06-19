@@ -43,6 +43,7 @@ class IVFPQIndex(CellContainer):
     self.n_subvectors = n_subvectors
     self.distance = distance
     self.verbose = verbose
+    self.n_probe = 1
 
     self.vq_codec = VQCodec(
       n_clusters = n_cells,
@@ -226,16 +227,16 @@ class IVFPQIndex(CellContainer):
     assert k <= 1024
     if self.distance == "cosine":
       x = util.normalize(x, dim=0)
-    n_query = query.shape[1]
+    n_query = x.shape[1]
     storage = self._storage
     is_empty = self._is_empty
     codebook = self.vq_codec.codebook
-    precomputed = self.pq_codec.precompute_adc(query)
+    precomputed = self.pq_codec.precompute_adc(x)
     if n_probe == 1:
-      topk_sims, topk_labels = self._l2_min_cuda(query.T, codebook, dim=1)
+      topk_sims, topk_labels = self._l2_min_cuda(x.T, codebook, dim=1)
       topk_labels = topk_labels[:, None]
     else:
-      _, topk_labels = self._l2_topk_cuda(query.T, codebook, k=n_probe, dim=1)
+      _, topk_labels = self._l2_topk_cuda(x.T, codebook, k=self.n_probe, dim=1)
     cell_start = self._cell_start[topk_labels]
     cell_size = self._cell_size[topk_labels]
     if k == 1:
