@@ -2,6 +2,10 @@
 #define unlikely(x)    __builtin_expect(!!(x), 0)
 #define load(x)        __ldcg(x)
 #define store(x, value) __stcs(x, value)
+#ifndef INFINITY
+#define INFINITY __int_as_float(0x7f800000)
+#endif
+
 
 #define _VOLATILE_  
 

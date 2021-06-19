@@ -15,3 +15,6 @@ from .MaxSimCuda import MaxSimCuda
 from .BMMCuda import BMMCuda
 from .MinBMMCuda import MinBMMCuda
 from .TopkBMMCuda import TopkBMMCuda
+
+from .IVFPQTopkCuda import IVFPQTopkCuda
+from .IVFPQTop1Cuda import IVFPQTop1Cuda
