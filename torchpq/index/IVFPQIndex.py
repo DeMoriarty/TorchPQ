@@ -5,6 +5,7 @@ from ..container import CellContainer
 from ..codec import PQCodec, VQCodec
 from ..kernels import IVFPQTopkCuda
 from ..kernels import IVFPQTop1Cuda
+from ..kernels import TopkBMMCuda
 from ..kernels import MinBMMCuda
 from .. import util
 
