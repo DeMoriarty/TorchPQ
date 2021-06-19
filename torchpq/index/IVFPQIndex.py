@@ -233,7 +233,7 @@ class IVFPQIndex(CellContainer):
     is_empty = self._is_empty
     codebook = self.vq_codec.codebook
     precomputed = self.pq_codec.precompute_adc(x)
-    if n_probe == 1:
+    if self.n_probe == 1:
       topk_sims, topk_labels = self._l2_min_cuda(x.T, codebook, dim=1)
       topk_labels = topk_labels[:, None]
     else:
