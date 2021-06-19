@@ -55,7 +55,7 @@ class IVFPQTop1Cuda(CustomKernel):
   
   def __call__(
       self, data, precomputed,
-      is_empty, div_start, div_size):
+      is_empty, div_start, div_size, n_candidates=1):
     """
       data: shape=[n_subvectors // n_cs, n_data, n_cs], dtype=uint8
       precomputed: shape=[n_subvectors, n_query, n_clusters], dtype=float32
@@ -76,6 +76,7 @@ class IVFPQTop1Cuda(CustomKernel):
     assert precomputed.dtype == torch.float32
     assert div_start.dtype == div_size.dtype == torch.int64
     assert is_empty.dtype == torch.uint8
+    assert n_candidates == 1
 
     tot_size = div_size.sum(dim=1)
     values = torch.empty(n_query, 1, device="cuda:0", dtype=torch.float32)

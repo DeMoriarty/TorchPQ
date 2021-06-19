@@ -3,6 +3,9 @@ import numpy as np
 from .BaseIndex import BaseIndex
 from ..container import CellContainer
 from ..codec import PQCodec, VQCodec
+from ..kernels import IVFPQTopkCuda
+from ..kernels import IVFPQTop1Cuda
+from ..kernels import MinBMMCuda
 from .. import util
 
 class IVFPQIndex(CellContainer):
@@ -57,6 +60,42 @@ class IVFPQIndex(CellContainer):
       n_clusters = 256,
       distance = distance,
       verbose = verbose
+    )
+
+    self._top1024_cuda = IVFPQTopkCuda(
+      m=n_subvectors,
+      tpb=1024,
+      n_cs=self.contiguous_size,
+      sm_size=n_subvectors * 1024,
+    )
+
+    self._top512_cuda = IVFPQTopkCuda(
+      m=n_subvectors,
+      tpb=512,
+      n_cs=self.contiguous_size,
+      sm_size=n_subvectors * 1024,
+    )
+
+    self._top256_cuda = IVFPQTopkCuda(
+      m=n_subvectors,
+      tpb=512,
+      n_cs=self.contiguous_size,
+      sm_size=n_subvectors * 1024,
+    )
+
+    self._top1_cuda = IVFPQTop1Cuda(
+      m=n_subvectors,
+      tpb=512,
+      n_cs=self.contiguous_size,
+      sm_size=n_subvectors * 1024,
+    )
+
+    self._l2_min_cuda = MinBMMCuda(
+      4, 4, "nl2"
+    )
+
+    self._l2_topk_cuda = TopkBMMCuda(
+      4, 4, "l2"
     )
 
   def set_vq_codec_max_iter(self, value):
@@ -184,5 +223,36 @@ class IVFPQIndex(CellContainer):
   def search(self, x, k=1):
     assert len(x.shape) == 2
     assert x.shape[0] == self.d_vector
+    assert k <= 1024
     if self.distance == "cosine":
       x = util.normalize(x, dim=0)
+    n_query = query.shape[1]
+    storage = self._storage
+    is_empty = self._is_empty
+    codebook = self.vq_codec.codebook
+    precomputed = self.pq_codec.precompute_adc(query)
+    if n_probe == 1:
+      topk_sims, topk_labels = self._l2_min_cuda(query.T, codebook, dim=1)
+      topk_labels = topk_labels[:, None]
+    else:
+      _, topk_labels = self._l2_topk_cuda(query.T, codebook, k=n_probe, dim=1)
+    cell_start = self._cell_start[topk_labels]
+    cell_size = self._cell_size[topk_labels]
+    if k == 1:
+      topk_fn = self._top1_cuda
+    elif k <= 256:
+      topk_fn = self._top256_cuda
+    elif k <= 512:
+      topk_fn = self._top512_cuda
+    elif k <= 1024:
+      topk_fn = self._top1024_cuda
+
+    topk_val, topk_idx = topk_fn(
+      data=self._storage,
+      precomputed=precomputed,
+      is_empty=self._is_empty,
+      div_start=cell_start,
+      div_size=cell_size,
+      n_candidates = k,
+    )
+    return topk_val, topk_idx
