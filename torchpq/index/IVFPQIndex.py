@@ -93,12 +93,20 @@ class IVFPQIndex(CellContainer):
     )
 
     self._l2_min_cuda = MinBMMCuda(
-      4, 4, "nl2"
+      4, 4, "l2"
     )
 
     self._l2_topk_cuda = TopkBMMCuda(
-      4, 4, "l2"
+      4, 4, "nl2"
     )
+
+    self.warmup_kernels()
+
+  def warmup_kernels(self):
+    a = torch.randn(128, 128, device=self.device)
+    b = torch.randn(128, 128, device=self.device)
+    self._l2_min_cuda(a, b, dim=0)
+    self._l2_topk_cuda(a, b, dim=0, k=128)
 
   def set_vq_codec_max_iter(self, value):
     self.vq_codec.kmeans.max_iter = value
@@ -225,7 +233,7 @@ class IVFPQIndex(CellContainer):
   def search(self, x, k=1):
     assert len(x.shape) == 2
     assert x.shape[0] == self.d_vector
-    assert k <= 1024
+    assert 0 < k <= 1024
     if self.distance == "cosine":
       x = util.normalize(x, dim=0)
     n_query = x.shape[1]
