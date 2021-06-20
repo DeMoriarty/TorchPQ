@@ -11,5 +11,6 @@ from . import kernels
 from . import experimental
 from . import metric
 from . import util
+from . import old
 
 from .CustomModule import CustomModule
