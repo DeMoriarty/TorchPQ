@@ -20,7 +20,7 @@ __device__ void mutex_lock(
     while (atomicCAS(mutex, 0, 1) == 1) {
       __nanosleep(ns);
       counter ++;
-      if (counter > 100000) break;
+      if (counter > 1000) break;
       if (ns < 256) {
         ns *= 2;
       }
