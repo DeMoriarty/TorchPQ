@@ -266,4 +266,4 @@ class IVFPQIndex(CellContainer):
       n_candidates = k,
     )
     topk_ids = self.get_id_by_address(topk_address)
-    return topk_val, topk_idx
+    return topk_val, topk_ids
