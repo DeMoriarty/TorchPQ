@@ -257,7 +257,7 @@ class IVFPQIndex(CellContainer):
     elif k <= 1024:
       topk_fn = self._top1024_cuda
 
-    topk_val, topk_idx = topk_fn(
+    topk_val, topk_address = topk_fn(
       data=self._storage,
       precomputed=precomputed,
       is_empty=self._is_empty,
@@ -265,4 +265,5 @@ class IVFPQIndex(CellContainer):
       div_size=cell_size,
       n_candidates = k,
     )
+    topk_ids = self.get_id_by_address(topk_address)
     return topk_val, topk_idx

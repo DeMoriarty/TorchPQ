@@ -12,5 +12,6 @@ from . import experimental
 from . import metric
 from . import util
 from . import old
+from . import index
 
 from .CustomModule import CustomModule
