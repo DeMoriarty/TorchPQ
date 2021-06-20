@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from ..clustering import MultiKMeans
-from ..kernels import PQDecodeCUDA
+from ..kernels import PQDecodeCuda
 from ..CustomModule import CustomModule
 
 class PQ(CustomModule):
@@ -31,7 +31,7 @@ class PQ(CustomModule):
       verbose = verbose,
     )
 
-    self._decode_cuda = PQDecodeCUDA(tm=2, td=8)
+    self._decode_cuda = PQDecodeCuda(tm=2, td=8)
 
   @property
   def codebook(self):
