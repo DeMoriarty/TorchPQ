@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from ..kernels import GetAddressOfIDCuda
-from ..kernels import GetDivOfAddressV2Cuda
+from ..kernels import GetAddressByIDCuda
+from ..kernels import GetDivByAddressV2Cuda
 from ..kernels import GetIOACuda
 from ..kernels import GetWriteAddressV2Cuda
 from .SQ import SQ
@@ -145,10 +145,10 @@ class IVFPQBase(CustomModule):
     self.register_buffer("address2id", address2id)
     self.register_buffer("is_empty", is_empty)
 
-    self._get_address_of_id_cuda = GetAddressOfIDCuda(
+    self._get_address_of_id_cuda = GetAddressByIDCuda(
       tpb=256,
     )
-    self._get_div_of_address_cuda = GetDivOfAddressV2Cuda(
+    self._get_div_of_address_cuda = GetDivByAddressV2Cuda(
       ta=4,
       tpb=256,
     )
