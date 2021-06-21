@@ -290,12 +290,10 @@ __global__ void ivfpq_top1(
     value = cIsEmpty == 0 ? value : -INFINITY;
     index = cIsEmpty == 0 ? index : -1;
 
-    block_max(value, index, sMem);
-    if (tid == 0){
-      thread_comparator(finalValue, finalIndex, value, index);
-    }
+    thread_comparator(finalValue, finalIndex, value, index);
     iN += _TPB_;
   }
+  block_max(finalValue, finalIndex, sMem);
 
   if (tid == 0){
     const int writeAddress = qid;
