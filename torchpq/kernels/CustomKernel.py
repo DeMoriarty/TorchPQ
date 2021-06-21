@@ -1,7 +1,7 @@
 import cupy as cp
 import torch
 
-@cp.util.memoize(for_each_device=True)
+@cp.memoize(for_each_device=True)
 def cunnex(func_name, func_body):
   return cp.cuda.compile_with_cache(func_body).get_function(func_name)
 
