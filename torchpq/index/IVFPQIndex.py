@@ -20,6 +20,7 @@ class IVFPQIndex(CellContainer):
       expand_mode="double",
       distance="euclidean",
       device='cuda:0',
+      pq_use_residual=False,
       verbose=0,
     ):
     if torch.device(device).type == "cuda":
@@ -44,6 +45,7 @@ class IVFPQIndex(CellContainer):
     self.n_subvectors = n_subvectors
     self.distance = distance
     self.verbose = verbose
+    self.pq_use_residual = pq_use_residual
     self.n_probe = 1
 
     self.vq_codec = VQCodec(
@@ -138,10 +140,14 @@ class IVFPQIndex(CellContainer):
     d_vector, n_data = x.shape
 
     self.print_message("start training VQ codec...", 1)
-    self.vq_codec.train(x)
+    code = self.vq_codec.train(x)
 
     self.print_message("start training PQ codec...", 1)
-    self.pq_codec.train(x)
+    if self.pq_use_residual:
+      recon = self.vq_codec.decode(code)
+      self.pq_codec.train(x - recon)
+    else:
+      self.pq_codec.train(x)
 
     self.print_message("index is trained successfully!", 1)
   
@@ -162,8 +168,14 @@ class IVFPQIndex(CellContainer):
     assert x.shape[0] == self.d_vector
     if self.distance == "cosine":
       x = util.normalize(x)
-    y = self.pq_codec.encode(x)
-    return y
+    if self.pq_use_residual:
+      vq_code = self.vq_codec.encode(x)
+      recon = self.vq_codec.decode(vq_code)
+      pq_code = self.pq_codec.encode(x - recon)
+      return pq_code, vq_code
+    else:
+      y = self.pq_codec.encode(x)
+      return y
 
   def decode(self, x):
     """
@@ -178,9 +190,19 @@ class IVFPQIndex(CellContainer):
         dtype : float32
         shape : [d_vector, n_data]
     """
-    assert len(x.shape) == 2
-    assert x.shape[0] == self.n_subvectors
-    y = self.pq_codec.decode(x)
+    if self.pq_use_residual:
+      assert len(x) == 2
+      x = pq_code, vq_code
+      assert pq_code.shape[0] == self.n_subvectors
+      assert pq_code.shape[1] == vq_code.shape[0]
+      residual = self.pq_codec.decode(pq_code)
+      recon = self.vq_codec.decode(vq_code)
+      y = recon + residual
+
+    else:
+      assert len(x.shape) == 2
+      assert x.shape[0] == self.n_subvectors
+      y = self.pq_codec.decode(x)
     return y
   
   def add(self, x, ids=None, return_address=False):
@@ -221,7 +243,11 @@ class IVFPQIndex(CellContainer):
       x = util.normalize(x)
 
     assigned_cells = self.vq_codec.encode(x)
-    quantized_x = self.encode(x)
+    if self.pq_use_residual:
+      quantized_x, _ = self.encode(x)
+    else:
+      quantized_x = self.encode(x)
+
 
     return super(IVFPQIndex, self).add(
       quantized_x,
@@ -240,7 +266,11 @@ class IVFPQIndex(CellContainer):
     storage = self._storage
     is_empty = self._is_empty
     codebook = self.vq_codec.codebook
-    precomputed = self.pq_codec.precompute_adc(x)
+    if self.pq_use_residual:
+      pass
+      # precomputed = self.pq_codec.precompute_adc(x - recon)
+    else:
+      precomputed = self.pq_codec.precompute_adc(x)
     if self.n_probe == 1:
       topk_sims, topk_labels = self._l2_min_cuda(x.T, codebook, dim=1)
       topk_labels = topk_labels[:, None]

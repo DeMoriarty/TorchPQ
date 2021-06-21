@@ -52,5 +52,6 @@ class VQCodec(BaseCodec):
         shape : [d_vector, n_data]
         dtype : float32
     """
-    self.kmeans.fit(data)
+    labels = self.kmeans.fit(data)
     self._trained(True)
+    return labels
