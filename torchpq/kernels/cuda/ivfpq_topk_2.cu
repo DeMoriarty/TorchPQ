@@ -545,7 +545,7 @@ __device__ void load_precomputed_v3(
         (iCell) * _M_ * _K_ +\
         (i) * _K_ +\
         (tid);
-      sMem[i * _K_ + tid] = part2[adr2];
+      sMem[i * _K_ + tid] += part2[adr2];
 
       #else
       #pragma unroll
@@ -908,9 +908,9 @@ __global__ void ivfpq_topk_residual_precomputed(
   for (int cCell = 0; cCell < nProbe; cCell++){
     int cCellStart = cellStart[qid * nProbe + cCell];
     int cCellSize = cellSize[qid * nProbe + cCell];
+    int cCellEnd = cCellStart + cCellSize;
     int iCell = cells[qid * nProbe + cCell];
     load_precomputed_v3(part1, part2, sMem, iCell);
-    int cCellEnd = cCellStart + cCellSize;
     int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
     for (int iter = 0; iter < nIter; iter++ ){
       int iN = cCellStart + iter * _TPB_ + tid;
