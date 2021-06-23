@@ -790,7 +790,7 @@ __global__ void ivfpq_topk_residual(
       float index = iN;
       int cIsEmpty = 0;
       if (cCellStart <= iN && iN < cCellEnd){
-        value = 0.f;
+        value = baseSims[qid * nProbe + cCell];
         cIsEmpty = isEmpty[iN];
         uint8n_t dataCache[_M_ / _NCS_];
         load_data(data, dataCache, iN, nData);
@@ -918,7 +918,7 @@ __global__ void ivfpq_topk_residual_precomputed(
       float index = iN;
       int cIsEmpty = 0;
       if (cCellStart <= iN && iN < cCellEnd){
-        value = 0.f;
+        value = baseSims[qid * nProbe + cCell];
         cIsEmpty = isEmpty[iN];
         uint8n_t dataCache[_M_ / _NCS_];
         load_data(data, dataCache, iN, nData);
