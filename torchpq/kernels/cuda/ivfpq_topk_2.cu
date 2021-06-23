@@ -760,8 +760,8 @@ __global__ void ivfpq_topk(
 extern "C"
 __global__ void ivfpq_topk_residual(
   const uint8n_t* __restrict__ data,
-  const float* __restrict__ baseSims,
   const float* __restrict__ precomputed,
+  const float* __restrict__ baseSims,
   const uint8_t* __restrict__ isEmpty,
   const ll_t* __restrict__ cellStart,
   const ll_t* __restrict__ cellSize,
