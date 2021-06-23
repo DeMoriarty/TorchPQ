@@ -911,13 +911,15 @@ __global__ void ivfpq_topk_residual_precomputed(
     int cCellEnd = cCellStart + cCellSize;
     int iCell = cells[qid * nProbe + cCell];
     load_precomputed_v3(part1, part2, sMem, iCell);
+    int cBaseSim = baseSims[qid * nProbe + cCell];
     int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
     for (int iter = 0; iter < nIter; iter++ ){
       int iN = cCellStart + iter * _TPB_ + tid;
-      float value = baseSims[qid * nProbe + cCell];
+      float value;
       float index = iN;
       int cIsEmpty = 0;
-      if (cCellStart <= iN && iN < cCellEnd){
+      if (iN < cCellEnd){
+        value = cBaseSim;
         cIsEmpty = isEmpty[iN];
         uint8n_t dataCache[_M_ / _NCS_];
         load_data(data, dataCache, iN, nData);
