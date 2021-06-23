@@ -539,13 +539,13 @@ __device__ void load_precomputed_v3(
         (qid) * _M_ * _K_ +\
         (i) * _K_ +\
         (tid);
-      sMem[i * _K_ + tid] = part1[adr1];
+      float precomputedValue = part1[adr1];
 
       int adr2 =\
         (iCell) * _M_ * _K_ +\
         (i) * _K_ +\
         (tid);
-      sMem[i * _K_ + tid] += part2[adr2];
+      sMem[i * _K_ + tid] = precomputedValue + part2[adr2];
 
       #else
       #pragma unroll
@@ -554,13 +554,13 @@ __device__ void load_precomputed_v3(
           (qid) * _M_ * _K_ +\
           (i) * _K_ +\
           (j * _TPB_ + tid);
-        sMem[i * _K_ + j * _TPB_ + tid] = part1[adr1];
+        float precomputedValue = part1[adr1];
 
         int adr2 =\
           (iCell) * _M_ * _K_ +\
           (i) * _K_ +\
           (j * _TPB_ + tid);
-        sMem[i * _K_ + j * _TPB_ + tid] += part2[adr2];
+        sMem[i * _K_ + j * _TPB_ + tid] = precomputedValue + part2[adr2];
       }
       #endif
     }
