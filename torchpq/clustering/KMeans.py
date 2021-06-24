@@ -6,6 +6,7 @@ from time import time
 
 # from ..kernels import MaxSimCuda
 from ..kernels import MinBMMCuda
+from ..kernels import TopkBMMCuda
 from ..kernels import ComputeCentroidsCuda
 from ..CustomModule import CustomModule
 
@@ -79,13 +80,29 @@ class KMeans(CustomModule):
         sm_size=sm_size,
       )
 
-      if distance in ["euclidean", "manhattan"]:
-        distance = distance
+      if distance in ["euclidean"]:
+        self.max_sim_cuda = MinBMMCuda(
+        4, 4, distance="euclidean",
+        )
+        self.topk_sim_cuda = TopkBMMCuda(
+          4, 4, distance="negative_euclidean",
+        )
+        
+      elif distance in ["manhattan"]:
+        self.max_sim_cuda = MinBMMCuda(
+        4, 4, distance="manhattan",
+        )
+        self.topk_sim_cuda = TopkBMMCuda(
+          4, 4, distance="negative_manhattan",
+        )
+
       elif distance in ["cosine"]:
-        distance = "negative_inner"
-      self.max_sim_cuda = MinBMMCuda(
-        4, 4, distance=distance,
-      )
+        self.max_sim_cuda = MinBMMCuda(
+        4, 4, distance="negative_inner",
+        )
+        self.topk_sim_cuda = TopkBMMCuda(
+          4, 4, distance="inner",
+        )
 
   @staticmethod
   def remaining_memory(device):
@@ -405,7 +422,22 @@ class KMeans(CustomModule):
       k: int, should be in range [1, n_centroids]
     """
     assert self.centroids is not None, "kmeans is not trained"
-    assert k <= self.n_centroids, "k is too large"
-    sims = self.sim(query, self.centroids) #[n_query, n_clusters]
-    topkv, topki = sims.topk(dim=-1, k=k) #[n_query, k]
-    return (topkv, topki)
+    assert k <= self.n_centroids, "k is larger than number of centroids"
+    if k == 1:
+      topk_v, topk_i = self.max_sim_cuda(
+        query.transpose(-1, -2),
+        self.centroids,
+        dim=1
+      )
+      return (topk_v[..., None], topk_i[..., None])
+    elif k <= 128:
+      return self.topk_sim_cuda(
+        query.transpose(-1, -2),
+        self.centroids,
+        dim=1,
+        k=k
+      )
+    elif k > 128:
+      sims = self.sim(query, self.centroids) #[n_query, n_clusters]
+      topk_v, topk_i = sims.topk(dim=-1, k=k) #[n_query, k]
+      return (topk_v, topk_i)

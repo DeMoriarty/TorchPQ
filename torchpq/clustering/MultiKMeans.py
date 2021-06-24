@@ -4,7 +4,8 @@ import numpy as np
 import math
 from time import time
 
-from ..kernels import MaxSimCuda
+from ..kernels import MinBMMCuda
+from ..kernels import TopkBMMCuda
 from ..kernels import ComputeCentroidsCuda
 from ..CustomModule import CustomModule
 
@@ -77,13 +78,29 @@ class MultiKMeans(CustomModule):
         sm_size=sm_size,
       )
 
-      if distance in ["euclidean", "manhattan"]:
-        distance = distance
+      if distance in ["euclidean"]:
+        self.max_sim_cuda = MinBMMCuda(
+        4, 4, distance="euclidean",
+        )
+        self.topk_sim_cuda = TopkBMMCuda(
+          4, 4, distance="negative_euclidean",
+        )
+        
+      elif distance in ["manhattan"]:
+        self.max_sim_cuda = MinBMMCuda(
+        4, 4, distance="manhattan",
+        )
+        self.topk_sim_cuda = TopkBMMCuda(
+          4, 4, distance="negative_manhattan",
+        )
+
       elif distance in ["cosine"]:
-        distance = "negative_inner"
-      self.max_sim_cuda = MinBMMCuda(
-        4, 4, distance=distance,
-      )
+        self.max_sim_cuda = MinBMMCuda(
+        4, 4, distance="negative_inner",
+        )
+        self.topk_sim_cuda = TopkBMMCuda(
+          4, 4, distance="inner",
+        )
 
   @staticmethod
   def remaining_memory(device):
@@ -213,7 +230,11 @@ class MultiKMeans(CustomModule):
         sims = self.sim(data, current_centroids ) #[l,m,n]
         max_sims_v, max_sims_i = sims.max(dim=-1) #[l,m]
       elif data.device.type == "cuda":
-        max_sims_v, max_sims_i = self.max_sim_cuda(data.transpose(-1, -2), current_centroids, dim=2)
+        max_sims_v, max_sims_i = self.max_sim_cuda(
+          data.transpose(-1, -2),
+          current_centroids,
+          dim=2
+        )
       index = max_sims_v.argmin(dim=-1) #[l]
       arange = torch.arange(l, device=data.device)
       new_centroid = data[arange, :, index] #[l, d_vector]
@@ -271,7 +292,11 @@ class MultiKMeans(CustomModule):
           c_norm = centroids.norm(dim=-2, keepdim=True) + 1e-8
           data.div_(d_norm)
           centroids.div_(c_norm)
-        maxsims, labels = self.max_sim_cuda(data.transpose(-1, -2), centroids, dim=2)
+        maxsims, labels = self.max_sim_cuda(
+          data.transpose(-1, -2),
+          centroids,
+          dim=2
+        )
         if self.distance == "cosine":
           data.mul_(d_norm)
           centroids.mul_(c_norm)
@@ -413,6 +438,21 @@ class MultiKMeans(CustomModule):
     """
     assert self.centroids is not None, "kmeans is not trained"
     assert k <= self.n_centroids, "k is too large"
-    sims = self.sim(query, self.centroids) #[l, n_query, n_clusters]
-    topkv, topki = sims.topk(dim=-1, k=k) #[l, n_query, k]
-    return (topkv, topki)
+    if k == 1:
+      topk_v, topk_i = self.max_sim_cuda(
+        query.transpose(-1, -2),
+        self.centroids,
+        dim=2
+      )
+      return (topk_v[..., None], topk_i[..., None])
+    elif k <= 128:
+      return self.topk_sim_cuda(
+        query.transpose(-1, -2),
+        self.centroids,
+        dim=2,
+        k=k
+      )
+    elif k > 128:
+      sims = self.sim(query, self.centroids) #[n_query, n_clusters]
+      topk_v, topk_i = sims.topk(dim=-1, k=k) #[n_query, k]
+      return (topk_v, topk_i)
