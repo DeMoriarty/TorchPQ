@@ -29,6 +29,14 @@ __device__ void madd(
   c = fmaf(a, b, c);
 }
 
+__device__ void nmadd(
+  float a,
+  float b,
+  float &c
+) {
+  c = fmaf(-a, b, c);
+}
+
 __device__ void squared_l2(
   float a,
   float b,

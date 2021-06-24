@@ -15,12 +15,16 @@ class TopkBMMCuda(CustomKernel):
     self.patch_n = patch_n
     if distance == "inner":
       dist_fn = "madd"
+    elif distance == "negative_inner":
+      dist_fn = "nmadd"
     elif distance in ["l2", "euclidean"]:
       dist_fn = "squared_l2"
     elif distance in ["nl2", "negativel2","negative_euclidean"]:
       dist_fn = "negative_squared_l2"
     elif distance in ["l1", "manhattan"]:
       dist_fn = "l1"
+    elif distance in ["nl1", "negativel1","negative_manhattan"]:
+      dist_fn = "negative_l1"
     else:
       ValueError("Unrecognized distance type")
 
