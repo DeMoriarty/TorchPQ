@@ -5,8 +5,6 @@ from ..container import CellContainer
 from ..codec import PQCodec, VQCodec
 from ..kernels import IVFPQTopkCuda
 from ..kernels import IVFPQTop1Cuda
-from ..kernels import TopkBMMCuda
-from ..kernels import MinBMMCuda
 from .. import util
 
 class IVFPQIndex(CellContainer):
@@ -78,16 +76,6 @@ class IVFPQIndex(CellContainer):
       contiguous_size = self.contiguous_size,
       sm_size = n_subvectors * 1024,
     )
-
-    self._l2_min_cuda = MinBMMCuda(
-      4, 4, "l2"
-    )
-
-    self._l2_topk_cuda = TopkBMMCuda(
-      4, 4, "nl2"
-    )
-
-    self.warmup_kernels()
   
   @property
   def use_precomputed(self):
@@ -116,12 +104,6 @@ class IVFPQIndex(CellContainer):
       vq_codebook.transpose(-1, -2),
       pq_codebook
     ) * -2 - pq_codebook.norm(dim=1).pow(2)[:, None]
-
-  def warmup_kernels(self):
-    a = torch.randn(128, 128, device=self.device)
-    b = torch.randn(128, 128, device=self.device)
-    self._l2_min_cuda(a, b, dim=0)
-    self._l2_topk_cuda(a, b, dim=0, k=128)
 
   def set_vq_codec_max_iter(self, value):
     self.vq_codec.kmeans.max_iter = value
@@ -321,12 +303,14 @@ class IVFPQIndex(CellContainer):
     vq_codebook = self.vq_codec.codebook
 
     # find n_probe closest cells
-    if self.n_probe == 1:
-      topk_sims, cells = self._l2_min_cuda(x.T, vq_codebook, dim=1)
-      cells = cells[:, None]
-      topk_sims = topk_sims[:, None]
-    else:
-      topk_sims, cells = self._l2_topk_cuda(x.T, vq_codebook, k=self.n_probe, dim=1)
+
+    # if self.n_probe == 1:
+    #   topk_sims, cells = self._l2_min_cuda(x.T, vq_codebook, dim=1)
+    #   cells = cells[:, None]
+    #   topk_sims = topk_sims[:, None]
+    # else:
+    #   topk_sims, cells = self._l2_topk_cuda(x.T, vq_codebook, k=self.n_probe, dim=1)
+    topk_sims, cells = self.vq_codec.kmeans.topk(x, k=self.n_probe)
     cell_start = self._cell_start[cells]
     cell_size = self._cell_size[cells]
     

@@ -103,6 +103,8 @@ class KMeans(CustomModule):
         self.topk_sim_cuda = TopkBMMCuda(
           4, 4, distance="inner",
         )
+        
+      self.warmup_kernels()
 
   @staticmethod
   def remaining_memory(device):
@@ -209,6 +211,12 @@ class KMeans(CustomModule):
       return self.cos_sim(a, b, inplace=inplace, normalize=normalize)
     elif self.distance == "inner":
       return self.cos_sim(a, b, inplace=inplace, normalize=False)
+
+  def warmup_kernels(self):
+    a = torch.randn(128, 128, device="cuda")
+    b = torch.randn(128, 128, device="cuda")
+    self.max_sim_cuda(a, b, dim=0)
+    self.topk_sim_cuda(a, b, dim=0, k=128)
 
   def kmeanspp(self, data):
     """
