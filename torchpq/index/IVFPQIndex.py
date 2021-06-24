@@ -27,6 +27,7 @@ class IVFPQIndex(CellContainer):
       assert torch.cuda.is_available(), "cuda is not available"
       max_sm_bytes = util.get_maximum_shared_memory_bytes()
       assert n_subvectors <= max_sm_bytes // 1024
+    assert d_vector % n_subvectors == 0
 
     super(IVFPQIndex, self).__init__(
       code_size = n_subvectors,
@@ -43,10 +44,16 @@ class IVFPQIndex(CellContainer):
 
     self.d_vector = d_vector
     self.n_subvectors = n_subvectors
+    self.d_subvector = d_vector // n_subvectors
     self.distance = distance
     self.verbose = verbose
     self.pq_use_residual = pq_use_residual
     self.n_probe = 1
+    if pq_use_residual and (n_cells * 256 * n_subvectors * 4) <= 4*1024**3:
+      self._use_precomputed = True
+    else:
+      self._use_precomputed = False
+    self._precomputed_part2 = None
 
     self.vq_codec = VQCodec(
       n_clusters = n_cells,
@@ -66,32 +73,10 @@ class IVFPQIndex(CellContainer):
       verbose = verbose
     )
 
-    self._top1024_cuda = IVFPQTopkCuda(
-      m=n_subvectors,
-      tpb=1024,
-      n_cs=self.contiguous_size,
-      sm_size=n_subvectors * 1024,
-    )
-
-    self._top512_cuda = IVFPQTopkCuda(
-      m=n_subvectors,
-      tpb=512,
-      n_cs=self.contiguous_size,
-      sm_size=n_subvectors * 1024,
-    )
-
-    self._top256_cuda = IVFPQTopkCuda(
-      m=n_subvectors,
-      tpb=512,
-      n_cs=self.contiguous_size,
-      sm_size=n_subvectors * 1024,
-    )
-
-    self._top1_cuda = IVFPQTop1Cuda(
-      m=n_subvectors,
-      tpb=512,
-      n_cs=self.contiguous_size,
-      sm_size=n_subvectors * 1024,
+    self._ivfpq_topk = IVFPQTopk(
+      n_subvectors = n_subvectors,
+      contiguous_size = self.contiguous_size,
+      sm_size = n_subvectors * 1024,
     )
 
     self._l2_min_cuda = MinBMMCuda(
@@ -103,6 +88,34 @@ class IVFPQIndex(CellContainer):
     )
 
     self.warmup_kernels()
+  
+  @property
+  def use_precomputed(self):
+    return self._use_precomputed
+
+  @use_precomputed.setter
+  def use_precomputed(self, value):
+    if value:
+      assert self.pq_use_residual, " `use_precomputed=True` is only valid when `pq_use_residual` is True"
+      assert (self.pq_codec.is_trained and self.vq_codec.is_trained), "index is not trained"
+      required_memory = (self.n_cells * self.n_subvectors * 1024) / 1024**2
+      self.print_message(f"estimated memory for precomputed table is {required_memory} MB", 1)
+      self.precompute_part2()
+    else:
+      self._precomputed_part2 = None
+    self._use_precomputed = value
+
+  def precompute_part2(self):
+    pq_codebook = self.pq_codec.codebook
+    vq_codebook = self.vq_codec.codebook.reshape(
+      self.n_subvectors,
+      self.d_subvector,
+      self.n_cells
+    )
+    self._precomputed_part2 = torch.bmm(
+      vq_codebook.transpose(-1, -2),
+      pq_codebook
+    ) * -2 - pq_codebook.norm(dim=1).pow(2)[:, None]
 
   def warmup_kernels(self):
     a = torch.randn(128, 128, device=self.device)
@@ -192,7 +205,7 @@ class IVFPQIndex(CellContainer):
     """
     if self.pq_use_residual:
       assert len(x) == 2
-      x = pq_code, vq_code
+      pq_code, vq_code = x
       assert pq_code.shape[0] == self.n_subvectors
       assert pq_code.shape[1] == vq_code.shape[0]
       residual = self.pq_codec.decode(pq_code)
@@ -248,13 +261,53 @@ class IVFPQIndex(CellContainer):
     else:
       quantized_x = self.encode(x)
 
-
     return super(IVFPQIndex, self).add(
       quantized_x,
       cells=assigned_cells,
       ids=ids,
       return_address = return_address
     )
+
+  def precomputed_adc_residual_precomputed(self, x):
+    n_query = x.shape[1]
+    vq_codebook = self.vq_codec.codebook #[d_vector, n_cells]
+    pq_codebook = self.pq_codec.codebook #[n_subvectors, d_subvectors, 256]
+    x = x.reshape(
+      self.n_subvectors,
+      self.d_subvector,
+      n_query
+    ).transpose(-1, -2)
+    part1 = 2 * (x @ pq_codebook).permute(1, 0, 2) #[n_query, n_sub, 256]
+    if self._precomputed_part2 is None:
+      self.precompute_part2()
+    part2 = self._precomputed_part2.transpose(0, 1)
+    return part1, part2
+
+  def precomputed_adc_residual(self, x, cells):
+    # shape of cells: [n_query, n_probe]
+    # shape of x: [d_vector, n_query]
+    n_query = x.shape[1]
+    n_probe = cells.shape[1]
+    vq_codebook = self.vq_codec.codebook #[d_vector, n_cells]
+    pq_codebook = self.pq_codec.codebook #[n_subvectors, d_subvectors, 256]
+    x = x.reshape(
+      self.n_subvectors,
+      self.d_subvector,
+      n_query
+    ).transpose(-1, -2)
+    part1 = 2 * (x @ pq_codebook).permute(1, 0, 2) - pq_codebook.norm(dim=1).pow(2)[None]#[n_query, n_sub, 256]
+
+    vq_codebook = vq_codebook.reshape(
+      self.n_subvectors,
+      self.d_subvector,
+      self.n_cells
+    )
+    vq_codebook = vq_codebook[:, :, cells]#[n_sub, d_sub, n_query, n_probe]
+    vq_codebook = vq_codebook.permute(0, 2, 3, 1)#[n_sub, n_query, n_probe, d_sub]
+    pq_codebook = pq_codebook[:, None].expand(-1, n_query, -1, -1)#[n_sub, n_query, d_sub, 256]
+    part2 = - 2 * (vq_codebook @ pq_codebook)#[n_sub, n_query, n_probe, 256]
+    precomputed = part1[:, None] + part2.permute(1, 2, 0, 3)#[n_query, n_probe, n_sub, 256]
+    return precomputed
 
   def search(self, x, k=1):
     assert len(x.shape) == 2
@@ -265,35 +318,249 @@ class IVFPQIndex(CellContainer):
     n_query = x.shape[1]
     storage = self._storage
     is_empty = self._is_empty
-    codebook = self.vq_codec.codebook
+    vq_codebook = self.vq_codec.codebook
+
+    # find n_probe closest cells
+    if self.n_probe == 1:
+      topk_sims, cells = self._l2_min_cuda(x.T, vq_codebook, dim=1)
+      cells = cells[:, None]
+      topk_sims = topk_sims[:, None]
+    else:
+      topk_sims, cells = self._l2_topk_cuda(x.T, vq_codebook, k=self.n_probe, dim=1)
+    cell_start = self._cell_start[cells]
+    cell_size = self._cell_size[cells]
+    
     if self.pq_use_residual:
-      pass
-      # precomputed = self.pq_codec.precompute_adc(x - recon)
+      if self.use_precomputed:
+        part1, part2 = self.precomputed_adc_residual_precomputed(x)
+        topk_val, topk_address = self._ivfpq_topk.topk_residual_precomputed(
+          data=storage,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=topk_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          k=k
+        )
+      else:
+        precomputed = self.precomputed_adc_residual(x, cells)
+        topk_val, topk_address = self._ivfpq_topk.topk_residual(
+          data=storage,
+          base_sims=topk_sims,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          k=k
+        )
     else:
       precomputed = self.pq_codec.precompute_adc(x)
-    if self.n_probe == 1:
-      topk_sims, topk_labels = self._l2_min_cuda(x.T, codebook, dim=1)
-      topk_labels = topk_labels[:, None]
-    else:
-      _, topk_labels = self._l2_topk_cuda(x.T, codebook, k=self.n_probe, dim=1)
-    cell_start = self._cell_start[topk_labels]
-    cell_size = self._cell_size[topk_labels]
-    if k == 1:
-      topk_fn = self._top1_cuda
-    elif k <= 256:
-      topk_fn = self._top256_cuda
-    elif k <= 512:
-      topk_fn = self._top512_cuda
-    elif k <= 1024:
-      topk_fn = self._top1024_cuda
+      topk_val, topk_address = self._ivfpq_topk.topk(
+        data=storage,
+        precomputed=precomputed,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        k=k
+      )
 
-    topk_val, topk_address = topk_fn(
-      data=self._storage,
-      precomputed=precomputed,
-      is_empty=self._is_empty,
-      div_start=cell_start,
-      div_size=cell_size,
-      n_candidates = k,
-    )
     topk_ids = self.get_id_by_address(topk_address)
     return topk_val, topk_ids
+
+
+class IVFPQTopk:
+  def __init__(self, n_subvectors, contiguous_size=4, sm_size=48*1024):
+    self.n_subvectors = n_subvectors
+    self.contiguous_size = contiguous_size
+    self.sm_size = sm_size
+
+    self._top1024_cuda = IVFPQTopkCuda(
+      m=n_subvectors,
+      tpb=1024,
+      n_cs=contiguous_size,
+      sm_size=n_subvectors * 1024,
+    )
+
+    self._top512_cuda = IVFPQTopkCuda(
+      m=n_subvectors,
+      tpb=512,
+      n_cs=contiguous_size,
+      sm_size=n_subvectors * 1024,
+    )
+
+    self._top256_cuda = IVFPQTopkCuda(
+      m=n_subvectors,
+      tpb=256,
+      n_cs=contiguous_size,
+      sm_size=n_subvectors * 1024,
+    )
+
+    self._top1_cuda = IVFPQTop1Cuda(
+      m=n_subvectors,
+      tpb=512,
+      n_cs=contiguous_size,
+      sm_size=n_subvectors * 1024,
+    )
+
+  def topk(
+      self,
+      data,
+      precomputed,
+      cell_start,
+      cell_size,
+      is_empty,
+      k=256
+    ):
+    assert 0 < k <= 1024
+    if k == 1:
+      return self._top1_cuda.top1(
+        data=data,
+        precomputed=precomputed,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+    elif 1 < k <= 256:
+      return self._top256_cuda.topk(
+        data=data,
+        precomputed=precomputed,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+    elif 256 < k <= 512:
+      return self._top512_cuda.topk(
+        data=data,
+        precomputed=precomputed,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+    elif 512 < k <= 1024:
+      return self._top1024_cuda.topk(
+        data=data,
+        precomputed=precomputed,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+  
+  def topk_residual(
+      self,
+      data,
+      precomputed,
+      cell_start,
+      cell_size,
+      base_sims,
+      is_empty,
+      k=256
+    ):
+    assert 0 < k <= 1024
+    if k == 1:
+      return self._top1_cuda.top1_residual(
+        data=data,
+        precomputed=precomputed,
+        base_sims=base_sims,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+    elif 1 < k <= 256:
+      return self._top256_cuda.topk_residual(
+        data=data,
+        precomputed=precomputed,
+        base_sims=base_sims,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+    elif 256 < k <= 512:
+      return self._top512_cuda.topk_residual(
+        data=data,
+        precomputed=precomputed,
+        base_sims=base_sims,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+    elif 512 < k <= 1024:
+      return self._top1024_cuda.topk_residual(
+        data=data,
+        precomputed=precomputed,
+        base_sims=base_sims,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+
+  def topk_residual_precomputed(
+      self,
+      data,
+      part1,
+      part2,
+      cell_start,
+      cell_size,
+      cells,
+      base_sims,
+      is_empty,
+      k=256
+    ):
+    assert 0 < k <= 1024
+    if k == 1:
+      return self._top1_cuda.top1_residual_precomputed(
+        data=data,
+        part1=part1,
+        part2=part2,
+        cells=cells,
+        base_sims=base_sims,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+    elif 1 < k <= 256:
+      return self._top256_cuda.topk_residual_precomputed(
+        data=data,
+        part1=part1,
+        part2=part2,
+        cells=cells,
+        base_sims=base_sims,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+    elif 256 < k <= 512:
+      return self._top512_cuda.topk_residual_precomputed(
+        data=data,
+        part1=part1,
+        part2=part2,
+        cells=cells,
+        base_sims=base_sims,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
+    elif 512 < k <= 1024:
+      return self._top1024_cuda.topk_residual_precomputed(
+        data=data,
+        part1=part1,
+        part2=part2,
+        cells=cells,
+        base_sims=base_sims,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        n_candidates=k
+      )
