@@ -430,7 +430,7 @@ class KMeans(CustomModule):
       k: int, should be in range [1, n_centroids]
     """
     assert self.centroids is not None, "kmeans is not trained"
-    assert k <= self.n_centroids, "k is larger than number of centroids"
+    assert k <= self.n_clusters, "k is larger than number of clusters"
     if k == 1:
       topk_v, topk_i = self.max_sim_cuda(
         query.transpose(-1, -2),
