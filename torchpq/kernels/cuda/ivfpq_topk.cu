@@ -636,7 +636,7 @@ __global__ void ivfpq_topk(
 
   extern __shared__ _VOLATILE_ float sMem[]; // M * K
   load_precomputed_v1(precomputed, sMem, nQuery);
-  float finalValue = -654321;
+  float finalValue = -INFINITY;
   float finalIndex = -1;
   const ll_t threadTotalSize = totalSize[qid];
   const int nIter = (threadTotalSize + _TPB_ - 1) / _TPB_;
@@ -671,9 +671,9 @@ __global__ void ivfpq_topk(
       /*
       */
     } else {
-      value = -123456.f;
+      value = -INFINITY;
     }
-    value = cIsEmpty == 0 ? value : -987654.f;
+    value = cIsEmpty == 0 ? value : -INFINITY;
     index = cIsEmpty == 0 ? index : -1;
 
     #if _TPB_ == 32
