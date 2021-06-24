@@ -20,7 +20,6 @@ typedef union {
   uint8_t val[_NCS_];
 } uint8n_t;
 
-
 __device__ __forceinline__ float atomicMax(float *address, float val)
 {
   int ret = __float_as_int(*address);
@@ -31,32 +30,6 @@ __device__ __forceinline__ float atomicMax(float *address, float val)
         break;
   }
   return __int_as_float(ret);
-}
-
-__device__ void load_precomputed(
-  const float *precomputed,
-  _VOLATILE_ float *sMem,
-  int nQuery
-){
-  const int tid = threadIdx.x;
-  const int qid = blockIdx.x;
-  if (tid < 256){
-    #pragma unroll
-    for (int i = 0; i < _M_; i++){
-      #if _TPB_ >= 256
-      int adr = (i * nQuery * _K_) + (qid * _K_) + (tid);
-      sMem[i * _K_ + tid] = precomputed[adr];
-      
-      #else
-      #pragma unroll
-      for (int j = 0; j < _K_ / _TPB_; j++){
-        int adr = (i * nQuery * _K_) + (qid * _K_) + (j * _TPB_ + tid);
-        sMem[i * _K_ + j * _TPB_ + tid] = precomputed[adr];
-      }
-      #endif
-    }
-  }
-  __syncthreads();
 }
 
 __device__ __forceinline__ unsigned int bfe(
@@ -310,7 +283,6 @@ __device__ void bitonic_sort_global_64(
   }
 }
 
-
 #if _TPB_ >= 128
 __device__ void bitonic_sort_128(
   float &value,
@@ -350,7 +322,6 @@ __device__ void bitonic_sort_global_128(
     block_comparator_noop();
   }
 }
-
 
 #if _TPB_ >= 256
 __device__ void bitonic_sort_256(
@@ -491,6 +462,111 @@ __device__ void bitonic_sort_global_1024(
   }
 }
 
+__device__ void load_precomputed_v1(
+  const float *precomputed,
+  _VOLATILE_ float *sMem,
+  int nQuery
+){
+  const int tid = threadIdx.x;
+  const int qid = blockIdx.x;
+  if (tid < 256){
+    #pragma unroll
+    for (int i = 0; i < _M_; i++){
+      #if _TPB_ >= 256
+      int adr = (i * nQuery * _K_) + (qid * _K_) + (tid);
+      sMem[i * _K_ + tid] = precomputed[adr];
+      
+      #else
+      #pragma unroll
+      for (int j = 0; j < _K_ / _TPB_; j++){
+        int adr = (i * nQuery * _K_) + (qid * _K_) + (j * _TPB_ + tid);
+        sMem[i * _K_ + j * _TPB_ + tid] = precomputed[adr];
+      }
+      #endif
+    }
+  }
+  __syncthreads();
+}
+
+__device__ void load_precomputed_v2(
+  const float *precomputed,
+  _VOLATILE_ float *sMem,
+  int iProbe, int nProbe
+){
+  const int tid = threadIdx.x;
+  const int qid = blockIdx.x;
+  if (tid < 256){
+    #pragma unroll
+    for (int i = 0; i < _M_; i++){
+      #if _TPB_ >= 256
+      // int adr = (i * nQuery * _K_) + (qid * _K_) + (tid);
+      int adr = 
+        (qid) * nProbe * _M_ * _K_ +\
+        (iProbe) * _M_ * _K_ +\
+        (i) * _K_ +\
+        (tid);
+      sMem[i * _K_ + tid] = precomputed[adr];
+      
+      #else
+      #pragma unroll
+      for (int j = 0; j < _K_ / _TPB_; j++){
+        int adr = (qid) * nProbe * _M_ * _K_ +\
+          (iProbe) * _M_ * _K_ +\
+          (i) * _K_ +\
+          (j * _TPB_ + tid);
+        sMem[i * _K_ + j * _TPB_ + tid] = precomputed[adr];
+      }
+      #endif
+    }
+  }
+  __syncthreads();
+}
+
+__device__ void load_precomputed_v3(
+  const float* part1,
+  const float* part2,
+  _VOLATILE_ float *sMem,
+  int iCell
+){
+  const int tid = threadIdx.x;
+  const int qid = blockIdx.x;
+  if (tid < 256){
+    #pragma unroll
+    for (int i = 0; i < _M_; i++){
+      #if _TPB_ >= 256
+      // int adr = (i * nQuery * _K_) + (qid * _K_) + (tid);
+      int adr1 =\
+        (qid) * _M_ * _K_ +\
+        (i) * _K_ +\
+        (tid);
+      float precomputedValue = part1[adr1];
+
+      int adr2 =\
+        (iCell) * _M_ * _K_ +\
+        (i) * _K_ +\
+        (tid);
+      sMem[i * _K_ + tid] = precomputedValue + part2[adr2];
+
+      #else
+      #pragma unroll
+      for (int j = 0; j < _K_ / _TPB_; j++){
+        int adr1 =\
+          (qid) * _M_ * _K_ +\
+          (i) * _K_ +\
+          (j * _TPB_ + tid);
+        float precomputedValue = part1[adr1];
+
+        int adr2 =\
+          (iCell) * _M_ * _K_ +\
+          (i) * _K_ +\
+          (j * _TPB_ + tid);
+        sMem[i * _K_ + j * _TPB_ + tid] = precomputedValue + part2[adr2];
+      }
+      #endif
+    }
+  }
+  __syncthreads();
+}
 
 __device__ void load_consume_data(
   const uint8n_t* data,
@@ -559,7 +635,7 @@ __global__ void ivfpq_topk(
   const int qid = blockIdx.x; // query ID
 
   extern __shared__ _VOLATILE_ float sMem[]; // M * K
-  load_precomputed(precomputed, sMem, nQuery);
+  load_precomputed_v1(precomputed, sMem, nQuery);
   float finalValue = -654321;
   float finalIndex = -1;
   const ll_t threadTotalSize = totalSize[qid];
@@ -672,6 +748,261 @@ __global__ void ivfpq_topk(
           break;
     }
     iN += _TPB_;
+  }
+
+  if (_TPB_ - nCandidates <= tid){
+    const int writeAddress = (qid * nCandidates) + tid - ( _TPB_ - nCandidates);
+    gValue[writeAddress] = finalValue;
+    gIndex[writeAddress] = finalIndex;
+  }
+}
+
+extern "C"
+__global__ void ivfpq_topk_residual(
+  const uint8n_t* __restrict__ data,
+  const float* __restrict__ precomputed,
+  const float* __restrict__ baseSims,
+  const uint8_t* __restrict__ isEmpty,
+  const ll_t* __restrict__ cellStart,
+  const ll_t* __restrict__ cellSize,
+  const ll_t* __restrict__ totalSize,
+  float* __restrict__ gValue,
+  ll_t* __restrict__ gIndex,
+  int nData, int nQuery, int nProbe, int nCandidates
+) {
+  const int tid = threadIdx.x; // thread ID
+  const int qid = blockIdx.x; // query ID
+
+  extern __shared__ _VOLATILE_ float sMem[]; // M * K
+  const ll_t threadTotalSize = totalSize[qid];
+  float finalValue = -654321;
+  float finalIndex = -1;
+
+  for (int cCell = 0; cCell < nProbe; cCell++){
+    int cCellStart = cellStart[qid * nProbe + cCell];
+    int cCellSize = cellSize[qid * nProbe + cCell];
+    load_precomputed_v2(precomputed, sMem, cCell, nProbe);
+    float cBaseSim = baseSims[qid * nProbe + cCell];
+    int cCellEnd = cCellStart + cCellSize;
+    int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
+    for (int iter = 0; iter < nIter; iter++ ){
+      int iN = cCellStart + iter * _TPB_ + tid;
+      float value;
+      float index = iN;
+      int cIsEmpty = 0;
+      if (cCellStart <= iN && iN < cCellEnd){
+        value = cBaseSim;
+        cIsEmpty = isEmpty[iN];
+        uint8n_t dataCache[_M_ / _NCS_];
+        load_data(data, dataCache, iN, nData);
+        consume_data(sMem, dataCache, value);
+      } else {
+        value = -123456.f;
+      }
+      value = cIsEmpty == 0 ? value : -987654.f;
+      index = cIsEmpty == 0 ? index : -1;
+      
+      #if _TPB_ == 32
+      bitonic_sort_32(value, index, tid);
+
+      #elif _TPB_ == 64
+      bitonic_sort_64(value, index, sMem, tid);
+
+      #elif _TPB_ == 128
+      bitonic_sort_128(value, index, sMem, tid);
+
+      #elif _TPB_ == 256
+      bitonic_sort_256(value, index, sMem, tid);
+
+      #elif _TPB_ == 512
+      bitonic_sort_512(value, index, sMem, tid);
+
+      #elif _TPB_ == 1024
+      bitonic_sort_1024(value, index, sMem, tid);
+      #endif
+      
+      switch (nCandidates){
+        case 2:
+          bitonic_sort_global_2(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 4:
+          bitonic_sort_global_4(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 8:
+          bitonic_sort_global_8(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 16:
+          bitonic_sort_global_16(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 32:
+          bitonic_sort_global_32(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 64:
+          bitonic_sort_global_64(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 128:
+          bitonic_sort_global_128(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 256:
+          bitonic_sort_global_256(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 512:
+          bitonic_sort_global_512(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 1024:
+          bitonic_sort_global_1024(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+      }
+    }
+  }
+
+  if (_TPB_ - nCandidates <= tid){
+    const int writeAddress = (qid * nCandidates) + tid - ( _TPB_ - nCandidates);
+    gValue[writeAddress] = finalValue;
+    gIndex[writeAddress] = finalIndex;
+  }
+}
+
+extern "C"
+__global__ void ivfpq_topk_residual_precomputed(
+  const uint8n_t* __restrict__ data,
+  const float* __restrict__ part1,
+  const float* __restrict__ part2,
+  const ll_t* __restrict__ cells,
+  const float* __restrict__ baseSims,
+  const uint8_t* __restrict__ isEmpty,
+  const ll_t* __restrict__ cellStart,
+  const ll_t* __restrict__ cellSize,
+  const ll_t* __restrict__ totalSize,
+  float* __restrict__ gValue,
+  ll_t* __restrict__ gIndex,
+  int nData, int nQuery, int nProbe, int nCandidates
+) {
+  const int tid = threadIdx.x; // thread ID
+  const int qid = blockIdx.x; // query ID
+
+  extern __shared__ _VOLATILE_ float sMem[]; // M * K
+  const ll_t threadTotalSize = totalSize[qid];
+  float finalValue = -654321;
+  float finalIndex = -1;
+
+  for (int cCell = 0; cCell < nProbe; cCell++){
+    int cCellStart = cellStart[qid * nProbe + cCell];
+    int cCellSize = cellSize[qid * nProbe + cCell];
+    int cCellEnd = cCellStart + cCellSize;
+    int iCell = cells[qid * nProbe + cCell];
+    load_precomputed_v3(part1, part2, sMem, iCell);
+    float cBaseSim = baseSims[qid * nProbe + cCell];
+    int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
+    for (int iter = 0; iter < nIter; iter++ ){
+      int iN = cCellStart + iter * _TPB_ + tid;
+      float value;
+      float index = iN;
+      int cIsEmpty = 0;
+      if (iN < cCellEnd){
+        value = cBaseSim;
+        cIsEmpty = isEmpty[iN];
+        uint8n_t dataCache[_M_ / _NCS_];
+        load_data(data, dataCache, iN, nData);
+        consume_data(sMem, dataCache, value);
+      } else {
+        value = -123456.f;
+      }
+      value = cIsEmpty == 0 ? value : -987654.f;
+      index = cIsEmpty == 0 ? index : -1;
+      
+      #if _TPB_ == 32
+      bitonic_sort_32(value, index, tid);
+
+      #elif _TPB_ == 64
+      bitonic_sort_64(value, index, sMem, tid);
+
+      #elif _TPB_ == 128
+      bitonic_sort_128(value, index, sMem, tid);
+
+      #elif _TPB_ == 256
+      bitonic_sort_256(value, index, sMem, tid);
+
+      #elif _TPB_ == 512
+      bitonic_sort_512(value, index, sMem, tid);
+
+      #elif _TPB_ == 1024
+      bitonic_sort_1024(value, index, sMem, tid);
+      #endif
+      
+      switch (nCandidates){
+        case 2:
+          bitonic_sort_global_2(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 4:
+          bitonic_sort_global_4(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 8:
+          bitonic_sort_global_8(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 16:
+          bitonic_sort_global_16(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 32:
+          bitonic_sort_global_32(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 64:
+          bitonic_sort_global_64(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 128:
+          bitonic_sort_global_128(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 256:
+          bitonic_sort_global_256(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 512:
+          bitonic_sort_global_512(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 1024:
+          bitonic_sort_global_1024(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+      }
+    }
   }
 
   if (_TPB_ - nCandidates <= tid){
