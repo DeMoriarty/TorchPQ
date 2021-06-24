@@ -80,9 +80,9 @@ class MultiKMeans(CustomModule):
       if distance in ["euclidean", "manhattan"]:
         distance = distance
       elif distance in ["cosine"]:
-        distance = "inner"
-      self.max_sim_cuda = MaxSimCuda(
-        distance=distance,
+        distance = "negative_inner"
+      self.max_sim_cuda = MinBMMCuda(
+        4, 4, distance=distance,
       )
 
   @staticmethod
@@ -213,7 +213,7 @@ class MultiKMeans(CustomModule):
         sims = self.sim(data, current_centroids ) #[l,m,n]
         max_sims_v, max_sims_i = sims.max(dim=-1) #[l,m]
       elif data.device.type == "cuda":
-        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=2, mode="tn")
+        max_sims_v, max_sims_i = self.max_sim_cuda(data.transpose(-1, -2), current_centroids, dim=2)
       index = max_sims_v.argmin(dim=-1) #[l]
       arange = torch.arange(l, device=data.device)
       new_centroid = data[arange, :, index] #[l, d_vector]
@@ -271,7 +271,7 @@ class MultiKMeans(CustomModule):
           c_norm = centroids.norm(dim=-2, keepdim=True) + 1e-8
           data.div_(d_norm)
           centroids.div_(c_norm)
-        maxsims, labels = self.max_sim_cuda(data, centroids, dim=2, mode="tn")
+        maxsims, labels = self.max_sim_cuda(data.transpose(-1, -2), centroids, dim=2)
         if self.distance == "cosine":
           data.mul_(d_norm)
           centroids.mul_(c_norm)

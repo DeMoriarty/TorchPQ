@@ -4,7 +4,8 @@ import numpy as np
 import math
 from time import time
 
-from ..kernels import MaxSimCuda
+# from ..kernels import MaxSimCuda
+from ..kernels import MinBMMCuda
 from ..kernels import ComputeCentroidsCuda
 from ..CustomModule import CustomModule
 
@@ -81,10 +82,9 @@ class KMeans(CustomModule):
       if distance in ["euclidean", "manhattan"]:
         distance = distance
       elif distance in ["cosine"]:
-        distance = "inner"
-      self.max_sim_cuda = MaxSimCuda(
-        dim=2,
-        distance=distance,
+        distance = "negative_inner"
+      self.max_sim_cuda = MinBMMCuda(
+        4, 4, distance=distance,
       )
 
   @staticmethod
@@ -213,7 +213,7 @@ class KMeans(CustomModule):
         sims = self.sim(data, current_centroids )
         max_sims_v, max_sims_i = sims.max(dim=1)
       elif data.device.type == "cuda":
-        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=1, mode="tn")
+        max_sims_v, max_sims_i = self.max_sim_cuda(data.transpose(-1, -2), current_centroids, dim=1)
       index = max_sims_v.argmin(dim=0)
       new_centroid = data[:, index]
       centroids[:, i] = new_centroid
@@ -269,7 +269,7 @@ class KMeans(CustomModule):
           c_norm = centroids.norm(dim=0, keepdim=True) + 1e-8
           data.div_(d_norm)
           centroids.div_(c_norm)
-        maxsims, labels = self.max_sim_cuda(data, centroids, dim=1, mode="tn")
+        maxsims, labels = self.max_sim_cuda(data.transpose(-1, -2), centroids, dim=1)
         if self.distance == "cosine":
           data.mul_(d_norm)
           centroids.mul_(c_norm)
