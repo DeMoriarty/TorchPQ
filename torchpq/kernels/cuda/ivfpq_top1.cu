@@ -468,7 +468,7 @@ __global__ void ivfpq_top1_residual_precomputed(
     int cCellSize = cellSize[qid * nProbe + cCell];
     int iCell = cells[qid * nProbe + cCell];
     load_precomputed_v3(part1, part2, sMem, iCell);
-    int cBaseSim = baseSims[qid * nProbe + cCell];
+    float cBaseSim = baseSims[qid * nProbe + cCell];
     int cCellEnd = cCellStart + cCellSize;
     int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
     for (int iter = 0; iter < nIter; iter++ ){
