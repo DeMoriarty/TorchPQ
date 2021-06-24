@@ -423,7 +423,7 @@ class KMeans(CustomModule):
     _, labels = self.get_labels(query, self.centroids)
     return labels
 
-  def topk(self, query, k):
+  def topk(self, query, k=128):
     """
       Predict the top-k closest cluster centers of each sample in query
       query: torch.Tensor, shape : [d_vector, n_query]
