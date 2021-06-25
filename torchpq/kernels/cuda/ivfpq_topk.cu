@@ -582,8 +582,7 @@ __device__ void load_part1_to_cache(
         (qid) * _M_ * _K_ +\
         (i) * _K_ +\
         (tid);
-      float part1Value = part1[adr1];
-      part1Cache[i] = part1Value;
+      part1Cache[i] = part1[adr1];
       #endif
     }
   }
@@ -604,8 +603,7 @@ __device__ void load_part2_to_cache(
         (iCell) * _M_ * _K_ +\
         (i) * _K_ +\
         (tid);
-      float part2Value + part2[adr2];
-      part2Cache[i] = part2Value;
+      part2Cache[i] = part2[adr2];
       #endif
     }
   }
