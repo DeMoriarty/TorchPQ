@@ -68,7 +68,7 @@ class MultiKMeansOld(CustomModule):
     self.register_buffer("centroids", None)
     
     if torch.cuda.is_available():
-      self.compute_centroids_cuda = ComputeCentroidsCUDA(
+      self.compute_centroids_cuda = ComputeCentroidsCuda(
         de=de,
         dk=dk,
         sm_size=sm_size,
