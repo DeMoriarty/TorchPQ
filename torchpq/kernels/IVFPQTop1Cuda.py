@@ -42,7 +42,7 @@ class IVFPQTop1Cuda(CustomKernel):
       code = kernel,
       name = 'ivfpq_top1',
       options = (
-        '--maxrregcount=128',
+        '--maxrregcount=255',
         '--use_fast_math'
       ),
       # backend='nvcc',
@@ -53,7 +53,7 @@ class IVFPQTop1Cuda(CustomKernel):
       code = kernel,
       name = 'ivfpq_top1_residual',
       options = (
-        '--maxrregcount=128',
+        '--maxrregcount=255',
         '--use_fast_math'
       ),
       # backend='nvcc',
@@ -64,7 +64,7 @@ class IVFPQTop1Cuda(CustomKernel):
       code = kernel,
       name = 'ivfpq_top1_residual_precomputed',
       options = (
-        '--maxrregcount=128',
+        '--maxrregcount=255',
         '--use_fast_math'
       ),
       # backend='nvcc',

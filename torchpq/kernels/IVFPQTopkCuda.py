@@ -43,7 +43,7 @@ class IVFPQTopkCuda(CustomKernel):
       code = code,
       name = 'ivfpq_topk',
       options = (
-        '--maxrregcount=128',
+        '--maxrregcount=255',
         '--use_fast_math'
       ),
       # backend='nvcc',
@@ -54,7 +54,7 @@ class IVFPQTopkCuda(CustomKernel):
       code = code,
       name = 'ivfpq_topk_residual',
       options = (
-        '--maxrregcount=128',
+        '--maxrregcount=255',
         '--use_fast_math'
       ),
       # backend='nvcc',
@@ -65,7 +65,7 @@ class IVFPQTopkCuda(CustomKernel):
       code = code,
       name = 'ivfpq_topk_residual_precomputed',
       options = (
-        '--maxrregcount=128',
+        '--maxrregcount=255',
         '--use_fast_math'
       ),
       # backend='nvcc',
