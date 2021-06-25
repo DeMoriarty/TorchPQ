@@ -52,7 +52,7 @@ class IVFPQIndex(CellContainer):
     else:
       self._use_precomputed = False
     self._precomputed_part2 = None
-    self._use_cublass = False
+    self._use_cublas = False
 
     self.vq_codec = VQCodec(
       n_clusters = n_cells,
@@ -77,7 +77,15 @@ class IVFPQIndex(CellContainer):
       contiguous_size = self.contiguous_size,
       sm_size = n_subvectors * 1024,
     )
-  
+
+  @property
+  def use_cublas(self):
+    return self._use_cublas
+
+  @use_cublas.setter
+  def use_cublas(self, value):
+    self._use_cublas = value
+
   @property
   def use_precomputed(self):
     return self._use_precomputed
@@ -305,7 +313,7 @@ class IVFPQIndex(CellContainer):
 
     # find n_probe closest cells
 
-    if self._use_cublass:
+    if self._use_cublas:
       sims = torchpq.metric.negative_squared_l2_distance(x, vq_codebook)
       topk_sims, cells = sims.topk(k=n_probe, dim=1)
     else:
