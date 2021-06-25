@@ -267,6 +267,68 @@ __device__ void load_precomputed_v3(
   __syncthreads();
 }
 
+
+__device__ void load_part1_to_cache(
+  const float* part1,
+  float part1Cache[_M_]
+){
+  const int tid = threadIdx.x;
+  const int qid = blockIdx.x;
+  if (tid < 256){
+    #pragma unroll
+    for (int i = 0; i < _M_; i++){
+      #if _TPB_ >= 256
+      int adr1 =\
+        (qid) * _M_ * _K_ +\
+        (i) * _K_ +\
+        (tid);
+      part1Cache[i] = part1[adr1];
+      #endif
+    }
+  }
+}
+
+__device__ void load_part2_to_cache(
+  const float* part2,
+  float part2Cache[_M_],
+  int iCell
+){
+  const int tid = threadIdx.x;
+  const int qid = blockIdx.x;
+  if (tid < 256){
+    #pragma unroll
+    for (int i = 0; i < _M_; i++){
+      #if _TPB_ >= 256
+      int adr2 =\
+        (iCell) * _M_ * _K_ +\
+        (i) * _K_ +\
+        (tid);
+      part2Cache[i] = part2[adr2];
+      #endif
+    }
+  }
+}
+
+__device__ void store_precomputed_to_smem(
+  float part1Cache[_M_],
+  float part2Cache[_M_],
+  _VOLATILE_ float *sMem
+){
+  const int tid = threadIdx.x;
+  const int qid = blockIdx.x;
+  if (tid < 256){
+    #pragma unroll
+    for (int i = 0; i < _M_; i++){
+      #if _TPB_ >= 256
+      float part1Value = part1Cache[i];
+      float part2Value = part2Cache[i];
+      sMem[i * _K_ + tid] = part1Value + part2Value;
+      #endif
+    }
+  }
+  __syncthreads();
+}
+
 __device__ void load_consume_data(
   const uint8n_t* data,
   _VOLATILE_ float sMem[],
@@ -441,7 +503,7 @@ __global__ void ivfpq_top1_residual(
 }
 
 extern "C"
-__global__ void ivfpq_top1_residual_precomputed(
+__global__ void ivfpq_top1_residual_precomputed_v1(
   const uint8n_t* __restrict__ data,
   const float* __restrict__ part1,
   const float* __restrict__ part2,
@@ -486,6 +548,82 @@ __global__ void ivfpq_top1_residual_precomputed(
         value = -123456.f;
       }
       value = cIsEmpty == 0 ? value : -987654.f;
+      index = cIsEmpty == 0 ? index : -1;
+      thread_comparator(finalValue, finalIndex, value, index);
+    }
+  }
+  block_max(finalValue, finalIndex, sMem);
+
+  if (tid == 0){
+    const int writeAddress = qid;
+    gValue[writeAddress] = finalValue;
+    gIndex[writeAddress] = finalIndex;
+  }
+}
+
+extern "C"
+__global__ void ivfpq_top1_residual_precomputed(
+  const uint8n_t* __restrict__ data,
+  const float* __restrict__ part1,
+  const float* __restrict__ part2,
+  const ll_t* __restrict__ cells,
+  const float* __restrict__ baseSims,
+  const uint8_t* __restrict__ isEmpty,
+  const ll_t* __restrict__ cellStart,
+  const ll_t* __restrict__ cellSize,
+  const ll_t* __restrict__ totalSize,
+  float* __restrict__ gValue,
+  ll_t* __restrict__ gIndex,
+  int nData, int nQuery, int nProbe
+) {
+  const int tid = threadIdx.x; // thread ID
+  const int qid = blockIdx.x; // query ID
+
+  extern __shared__ _VOLATILE_ float sMem[]; // M * K
+  const ll_t threadTotalSize = totalSize[qid];
+  float finalValue = -INFINITY;
+  float finalIndex = -1;
+  float part1Cache[_M_];
+  float part2Cache[_M_];
+  load_part1_to_cache(part1, part1Cache);
+
+  int nCellStart = cellStart[qid * nProbe];
+  int nCellSize = cellSize[qid * nProbe];
+  int nCellEnd = nCellStart + nCellSize;
+  int iCell = cells[qid * nProbe];
+  load_part2_to_cache(part2, part2Cache, iCell);
+
+  for (int cCell = 0; cCell < nProbe; cCell++){
+    int cCellStart = nCellStart;
+    int cCellSize = nCellSize;
+    int cCellEnd = nCellEnd;
+    store_precomputed_to_smem(part1Cache, part2Cache, sMem);
+
+    if (cCell < nProbe - 1){
+      nCellStart = cellStart[qid * nProbe + cCell + 1];
+      nCellSize = cellSize[qid * nProbe + cCell + 1];
+      nCellEnd = nCellStart + nCellSize;
+      iCell = cells[qid * nProbe + cCell + 1];
+      load_part2_to_cache(part2, part2Cache, iCell);
+    }
+
+    float cBaseSim = baseSims[qid * nProbe + cCell];
+    int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
+    for (int iter = 0; iter < nIter; iter++ ){
+      int iN = cCellStart + iter * _TPB_ + tid;
+      float value;
+      float index = iN;
+      int cIsEmpty = 0;
+      if (cCellStart <= iN && iN < cCellEnd){
+        value = cBaseSim;
+        cIsEmpty = isEmpty[iN];
+        uint8n_t dataCache[_M_ / _NCS_];
+        load_data(data, dataCache, iN, nData);
+        consume_data(sMem, dataCache, value);
+      } else {
+        value = -INFINITY;
+      }
+      value = cIsEmpty == 0 ? value : -INFINITY;
       index = cIsEmpty == 0 ? index : -1;
       thread_comparator(finalValue, finalIndex, value, index);
     }
