@@ -389,12 +389,20 @@ class IVFPQTopk:
       sm_size=n_subvectors * 1024,
     )
 
-    self._top1_cuda = IVFPQTop1Cuda(
-      m=n_subvectors,
-      tpb=512,
-      n_cs=contiguous_size,
-      sm_size=n_subvectors * 1024,
-    )
+    if n_subvectors <= 32:
+      self._top1_cuda = IVFPQTop1Cuda(
+        m=n_subvectors,
+        tpb=512,
+        n_cs=contiguous_size,
+        sm_size=n_subvectors * 1024,
+      )
+    else:
+      self._top1_cuda = IVFPQTop1Cuda(
+        m=n_subvectors,
+        tpb=256,
+        n_cs=contiguous_size,
+        sm_size=n_subvectors * 1024,
+      )
 
   def topk(
       self,
