@@ -616,6 +616,7 @@ __device__ void store_precomputed_to_smem(
 ){
   const int tid = threadIdx.x;
   const int qid = blockIdx.x;
+  __syncthreads();
   if (tid < 256){
     #pragma unroll
     for (int i = 0; i < _M_; i++){
