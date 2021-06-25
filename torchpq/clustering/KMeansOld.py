@@ -5,8 +5,6 @@ import math
 from time import time
 
 from ..kernels import MaxSimCuda
-# from ..kernels import MinBMMCuda
-# from ..kernels import TopkBMMCuda
 from ..kernels import ComputeCentroidsCuda
 from ..CustomModule import CustomModule
 

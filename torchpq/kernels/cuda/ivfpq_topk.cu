@@ -568,6 +568,69 @@ __device__ void load_precomputed_v3(
   __syncthreads();
 }
 
+__device__ void load_part1_to_cache(
+  const float* part1,
+  float part1Cache[_M_]
+){
+  const int tid = threadIdx.x;
+  const int qid = blockIdx.x;
+  if (tid < 256){
+    #pragma unroll
+    for (int i = 0; i < _M_; i++){
+      #if _TPB_ >= 256
+      int adr1 =\
+        (qid) * _M_ * _K_ +\
+        (i) * _K_ +\
+        (tid);
+      float part1Value = part1[adr1];
+      part1Cache[i] = part1Value;
+      #endif
+    }
+  }
+}
+
+__device__ void load_part2_to_cache(
+  const float* part2,
+  float part2Cache[_M_],
+  int iCell
+){
+  const int tid = threadIdx.x;
+  const int qid = blockIdx.x;
+  if (tid < 256){
+    #pragma unroll
+    for (int i = 0; i < _M_; i++){
+      #if _TPB_ >= 256
+      int adr2 =\
+        (iCell) * _M_ * _K_ +\
+        (i) * _K_ +\
+        (tid);
+      float part2Value + part2[adr2];
+      part2Cache[i] = part2Value;
+      #endif
+    }
+  }
+}
+
+__device__ void store_precomputed_to_smem(
+  float part1Cache[_M_],
+  float part2Cache[_M_],
+  _VOLATILE_ float *sMem
+){
+  const int tid = threadIdx.x;
+  const int qid = blockIdx.x;
+  if (tid < 256){
+    #pragma unroll
+    for (int i = 0; i < _M_; i++){
+      #if _TPB_ >= 256
+      float part1Value = part1Cache[i];
+      float part2Value = part2Cache[i];
+      sMem[i * _K_ + tid] = part1Value + part2Value;
+      #endif
+    }
+  }
+  __syncthreads();
+}
+
 __device__ void load_consume_data(
   const uint8n_t* data,
   _VOLATILE_ float sMem[],
@@ -884,7 +947,7 @@ __global__ void ivfpq_topk_residual(
 }
 
 extern "C"
-__global__ void ivfpq_topk_residual_precomputed(
+__global__ void ivfpq_topk_residual_precomputed_v1(
   const uint8n_t* __restrict__ data,
   const float* __restrict__ part1,
   const float* __restrict__ part2,
@@ -912,6 +975,152 @@ __global__ void ivfpq_topk_residual_precomputed(
     int cCellEnd = cCellStart + cCellSize;
     int iCell = cells[qid * nProbe + cCell];
     load_precomputed_v3(part1, part2, sMem, iCell);
+    float cBaseSim = baseSims[qid * nProbe + cCell];
+    int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
+    for (int iter = 0; iter < nIter; iter++ ){
+      int iN = cCellStart + iter * _TPB_ + tid;
+      float value;
+      float index = iN;
+      int cIsEmpty = 0;
+      if (iN < cCellEnd){
+        value = cBaseSim;
+        cIsEmpty = isEmpty[iN];
+        uint8n_t dataCache[_M_ / _NCS_];
+        load_data(data, dataCache, iN, nData);
+        consume_data(sMem, dataCache, value);
+      } else {
+        value = -123456.f;
+      }
+      value = cIsEmpty == 0 ? value : -987654.f;
+      index = cIsEmpty == 0 ? index : -1;
+      
+      #if _TPB_ == 32
+      bitonic_sort_32(value, index, tid);
+
+      #elif _TPB_ == 64
+      bitonic_sort_64(value, index, sMem, tid);
+
+      #elif _TPB_ == 128
+      bitonic_sort_128(value, index, sMem, tid);
+
+      #elif _TPB_ == 256
+      bitonic_sort_256(value, index, sMem, tid);
+
+      #elif _TPB_ == 512
+      bitonic_sort_512(value, index, sMem, tid);
+
+      #elif _TPB_ == 1024
+      bitonic_sort_1024(value, index, sMem, tid);
+      #endif
+      
+      switch (nCandidates){
+        case 2:
+          bitonic_sort_global_2(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 4:
+          bitonic_sort_global_4(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 8:
+          bitonic_sort_global_8(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 16:
+          bitonic_sort_global_16(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 32:
+          bitonic_sort_global_32(
+            finalValue, finalIndex, value, index,
+            tid);
+            break;
+        case 64:
+          bitonic_sort_global_64(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 128:
+          bitonic_sort_global_128(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 256:
+          bitonic_sort_global_256(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 512:
+          bitonic_sort_global_512(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+        case 1024:
+          bitonic_sort_global_1024(
+            finalValue, finalIndex, value, index,
+            sMem, tid);
+            break;
+      }
+    }
+  }
+
+  if (_TPB_ - nCandidates <= tid){
+    const int writeAddress = (qid * nCandidates) + tid - ( _TPB_ - nCandidates);
+    gValue[writeAddress] = finalValue;
+    gIndex[writeAddress] = finalIndex;
+  }
+}
+
+extern "C"
+__global__ void ivfpq_topk_residual_precomputed(
+  const uint8n_t* __restrict__ data,
+  const float* __restrict__ part1,
+  const float* __restrict__ part2,
+  const ll_t* __restrict__ cells,
+  const float* __restrict__ baseSims,
+  const uint8_t* __restrict__ isEmpty,
+  const ll_t* __restrict__ cellStart,
+  const ll_t* __restrict__ cellSize,
+  const ll_t* __restrict__ totalSize,
+  float* __restrict__ gValue,
+  ll_t* __restrict__ gIndex,
+  int nData, int nQuery, int nProbe, int nCandidates
+) {
+  const int tid = threadIdx.x; // thread ID
+  const int qid = blockIdx.x; // query ID
+
+  extern __shared__ _VOLATILE_ float sMem[]; // M * K
+  const ll_t threadTotalSize = totalSize[qid];
+  float finalValue = -654321;
+  float finalIndex = -1;
+  float part1Cache[_M_];
+  float part2Cache[_M_];
+  load_part1_to_cache(part1, part1Cache);
+
+  int nCellStart = cellStart[qid * nProbe];
+  int nCellSize = cellSize[qid * nProbe];
+  int nCellEnd = nCellStart + nCellSize;
+  int iCell = cells[qid * nProbe];
+  load_part2_to_cache(part2, part2Cache, iCell);
+
+  for (int cCell = 0; cCell < nProbe; cCell++){
+    int cCellStart = nCellStart;
+    int cCellSize = nCellSize;
+    int cCellEnd = nCellEnd;
+    store_precomputed_to_smem(part1Cache, part2Cache, sMem);
+
+    if (cCell < nProbe - 1){
+      nCellStart = cellStart[qid * nProbe + cCell + 1];
+      nCellSize = cellSize[qid * nProbe + cCell + 1];
+      nCellEnd = nCellStart + nCellSize;
+      iCell = cells[qid * nProbe + cCell + 1];
+      load_part2_to_cache(part2, part2Cache, iCell);
+    }
+    
     float cBaseSim = baseSims[qid * nProbe + cCell];
     int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
     for (int iter = 0; iter < nIter; iter++ ){
