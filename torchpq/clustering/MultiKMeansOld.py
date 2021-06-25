@@ -78,7 +78,7 @@ class MultiKMeansOld(CustomModule):
         distance = distance
       elif distance in ["cosine"]:
         distance = "inner"
-      self.max_sim_cuda = MaxSimCUDA(
+      self.max_sim_cuda = MaxSimCuda(
         distance=distance,
       )
 
