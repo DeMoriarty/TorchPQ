@@ -224,8 +224,8 @@ class KMeans(CustomModule):
   def warmup_kernels(self):
     a = torch.randn(128, 128, device="cuda")
     b = torch.randn(128, 128, device="cuda")
-    self.max_sim_cuda(a, b, dim=0)
-    self.topk_sim_cuda(a, b, dim=0, k=128)
+    self.max_sim_cuda(a, b, dim=1)
+    self.topk_sim_cuda(a, b, dim=1, k=128)
 
   def kmeanspp(self, data):
     """
