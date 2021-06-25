@@ -248,7 +248,12 @@ class KMeans(CustomModule):
         max_sims_v, max_sims_i = sims.max(dim=1)
       elif data.device.type == "cuda":
         # max_sims_v, max_sims_i = self.max_sim_cuda(data.transpose(-1, -2), current_centroids, dim=1)
-        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=1, mode="tn")
+        max_sims_v, max_sims_i = self.max_sim_cuda(
+          data, 
+          current_centroids, 
+          dim=1, 
+          mode="tn"
+        )
       index = max_sims_v.argmin(dim=0)
       new_centroid = data[:, index]
       centroids[:, i] = new_centroid
@@ -305,7 +310,12 @@ class KMeans(CustomModule):
           data.div_(d_norm)
           centroids.div_(c_norm)
         # maxsims, labels = self.max_sim_cuda(data.transpose(-1, -2), centroids, dim=1)
-        maxsims, labels = self.max_sim_cuda(data, centroids, dim=1, mode="tn")
+        maxsims, labels = self.max_sim_cuda(
+          data,
+          centroids,
+          dim=1,
+          mode="tn"
+        )
         if self.distance == "cosine":
           data.mul_(d_norm)
           centroids.mul_(c_norm)
