@@ -314,9 +314,9 @@ class IVFPQIndex(CellContainer):
 
     # find n_probe closest cells
 
-    if self._use_cublas:
+    if self.use_cublas:
       sims = metric.negative_squared_l2_distance(x, vq_codebook)
-      topk_sims, cells = sims.topk(k=n_probe, dim=1)
+      topk_sims, cells = sims.topk(k=self.n_probe, dim=1)
     else:
       topk_sims, cells = self.vq_codec.kmeans.topk(x, k=self.n_probe)
     cell_start = self._cell_start[cells]
