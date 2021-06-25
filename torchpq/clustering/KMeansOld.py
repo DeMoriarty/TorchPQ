@@ -401,10 +401,10 @@ class KMeansOld(CustomModule):
     """
       Predict the top-k closest cluster centers of each sample in query
       query: torch.Tensor, shape : [d_vector, n_query]
-      k: int, should be in range [1, n_centroids]
+      k: int, should be in range [1, n_clusters]
     """
     assert self.centroids is not None, "kmeans is not trained"
-    assert k <= self.n_centroids, "k is too large"
+    assert k <= self.n_clusters, "k is too large"
     sims = self.sim(query, self.centroids) #[n_query, n_clusters]
     topkv, topki = sims.topk(dim=-1, k=k) #[n_query, k]
     return (topkv, topki)

@@ -4,7 +4,7 @@ import numpy as np
 import math
 from time import time
 
-# from ..kernels import MaxSimCuda
+from ..kernels import MaxSimCuda
 from ..kernels import MinBMMCuda
 from ..kernels import TopkBMMCuda
 from ..kernels import ComputeCentroidsCuda
@@ -81,24 +81,33 @@ class KMeans(CustomModule):
       )
 
       if distance in ["euclidean"]:
-        self.max_sim_cuda = MinBMMCuda(
-        4, 4, distance="euclidean",
+        # self.max_sim_cuda = MinBMMCuda(
+        # 4, 4, distance="euclidean",
+        # )
+        self.max_sim_cuda = MaxSimCuda(
+        dim=2, distance="euclidean",
         )
         self.topk_sim_cuda = TopkBMMCuda(
           4, 4, distance="negative_euclidean",
         )
         
       elif distance in ["manhattan"]:
-        self.max_sim_cuda = MinBMMCuda(
-        4, 4, distance="manhattan",
+        # self.max_sim_cuda = MinBMMCuda(
+        # 4, 4, distance="manhattan",
+        # )
+        self.max_sim_cuda = MaxSimCuda(
+        dim=2, distance="manhattan",
         )
         self.topk_sim_cuda = TopkBMMCuda(
           4, 4, distance="negative_manhattan",
         )
 
       elif distance in ["cosine"]:
-        self.max_sim_cuda = MinBMMCuda(
-        4, 4, distance="negative_inner",
+        # self.max_sim_cuda = MinBMMCuda(
+        # 4, 4, distance="negative_inner",
+        # )
+        self.max_sim_cuda = MaxSimCuda(
+          dim=2, distance="inner",
         )
         self.topk_sim_cuda = TopkBMMCuda(
           4, 4, distance="inner",
