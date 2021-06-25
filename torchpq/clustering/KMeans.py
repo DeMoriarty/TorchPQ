@@ -247,7 +247,8 @@ class KMeans(CustomModule):
         sims = self.sim(data, current_centroids )
         max_sims_v, max_sims_i = sims.max(dim=1)
       elif data.device.type == "cuda":
-        max_sims_v, max_sims_i = self.max_sim_cuda(data.transpose(-1, -2), current_centroids, dim=1)
+        # max_sims_v, max_sims_i = self.max_sim_cuda(data.transpose(-1, -2), current_centroids, dim=1)
+        max_sims_v, max_sims_i = self.max_sim_cuda(data, current_centroids, dim=1, mode="tn")
       index = max_sims_v.argmin(dim=0)
       new_centroid = data[:, index]
       centroids[:, i] = new_centroid
@@ -303,7 +304,8 @@ class KMeans(CustomModule):
           c_norm = centroids.norm(dim=0, keepdim=True) + 1e-8
           data.div_(d_norm)
           centroids.div_(c_norm)
-        maxsims, labels = self.max_sim_cuda(data.transpose(-1, -2), centroids, dim=1)
+        # maxsims, labels = self.max_sim_cuda(data.transpose(-1, -2), centroids, dim=1)
+        maxsims, labels = self.max_sim_cuda(data, centroids, dim=1, mode="tn")
         if self.distance == "cosine":
           data.mul_(d_norm)
           centroids.mul_(c_norm)
@@ -441,10 +443,16 @@ class KMeans(CustomModule):
     assert self.centroids is not None, "kmeans is not trained"
     assert k <= self.n_clusters, "k is larger than number of clusters"
     if k == 1:
+      # topk_v, topk_i = self.max_sim_cuda(
+      #   query.transpose(-1, -2),
+      #   self.centroids,
+      #   dim=1
+      # )
       topk_v, topk_i = self.max_sim_cuda(
-        query.transpose(-1, -2),
+        query,
         self.centroids,
-        dim=1
+        dim=1,
+        mode="tn"
       )
       return (topk_v[..., None], topk_i[..., None])
     elif k <= 128:
