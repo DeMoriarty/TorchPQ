@@ -198,7 +198,7 @@ class IVFPQBIndex(CellContainer):
     #   vq_codebook,
     #   k=self.n_neighbors
     # ) #TODO: TopkBMMCuda bugged
-    sims = self.vq_codebook.kmeans.sim(
+    sims = self.vq_codec.kmeans.sim(
       vq_codebook,
       vq_codebook,
     )
