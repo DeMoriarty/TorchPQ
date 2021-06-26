@@ -410,8 +410,8 @@ class IVFPQBIndex(CellContainer):
     # cells, sorted_cell_indices = torch.sort(cells, dim=-1)
     # topk_sims = topk_sims[sorted_cell_indices]
 
-    cell_start = self._cell_start[cells]
-    cell_size = self._cell_size[cells]
+    # cell_start = self._cell_start[cells]
+    # cell_size = self._cell_size[cells]
     
     if self.pq_use_residual:
       if self.use_precomputed:
