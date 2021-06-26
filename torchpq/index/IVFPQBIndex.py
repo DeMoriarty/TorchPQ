@@ -337,6 +337,7 @@ class IVFPQBIndex(CellContainer):
       sims = self.vq_codec.kmeans.sim(selected_x, neighbor_centroids) #[n_selected, n_neighbors-1]
       max_sim, max_sim_idx = sims.max(dim=0) #[n_neighbors-1]
       previous_border_sims = self._border_sims[cell, 1:] #[n_neighbor-1]
+      print("max_sim", max_sim, max_sim.shape)
       final_border_sim, update_mask = torch.stack(
         (previous_border_sims, max_sim)
       ).max(dim=0) #[n_neighbors-1]
