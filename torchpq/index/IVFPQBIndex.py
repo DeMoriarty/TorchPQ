@@ -340,16 +340,17 @@ class IVFPQBIndex(CellContainer):
       final_border_sim, update_mask = torch.stack(
         (previous_border_sims, max_sim)
       ).max(dim=0) #[n_neighbors-1]
-      new_border_idx = max_sim_idx[update_mask]
+      new_border_idx = max_sim_idx[update_mask.bool()]
       self._border_sims[cell, 1:] = final_border_sim
       address = torch.arange(
         1,
         self.n_neighbors,
         device=self.device
       ) + cell * self.n_neighbors
+      # print("new_border_idx", new_border_idx, new_border_idx.shape)
       new_data = quantized_x[:, mask][:, new_border_idx]
-      print("new_data", new_data, new_data.shape)
-      print("address", address, address.shape)
+      # print("address", address, address.shape)
+      print(new_data)
       self._border.set_data_by_address(
         data = new_data,
         address = address
