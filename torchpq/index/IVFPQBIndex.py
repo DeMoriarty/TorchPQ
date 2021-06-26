@@ -347,10 +347,7 @@ class IVFPQBIndex(CellContainer):
         self.n_neighbors,
         device=self.device
       ) + cell * self.n_neighbors
-      # print("new_border_idx", new_border_idx, new_border_idx.shape)
       new_data = quantized_x[:, mask][:, new_border_idx]
-      # print("address", address, address.shape)
-      print(new_data)
       self._border.set_data_by_address(
         data = new_data,
         address = address
@@ -482,7 +479,7 @@ class IVFPQBIndex(CellContainer):
 
       cell_start = self._cell_start[topk_neighbors]
       cell_size = self._cell_size[topk_neighbors]
-      cell_size[topk_neighbors < 0] = 0
+      # cell_size[topk_neighbors < 0] = 0
 
       topk_val, topk_address = self._ivfpq_topk.topk(
         data=storage,
