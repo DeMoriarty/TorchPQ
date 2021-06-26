@@ -606,10 +606,10 @@ __global__ void ivfpq_top1_residual_precomputed(
   load_part2_to_cache(part2, part2Cache, iCell);
 
   for (int cCell = 0; cCell < nProbe; cCell++){
+    int cCellStart = nCellStart;
+    int cCellSize = nCellSize;
+    int cCellEnd = nCellEnd;
     if (!cCellRepeated){
-      int cCellStart = nCellStart;
-      int cCellSize = nCellSize;
-      int cCellEnd = nCellEnd;
       store_precomputed_to_smem(part1Cache, part2Cache, sMem);
     }
 
@@ -631,7 +631,7 @@ __global__ void ivfpq_top1_residual_precomputed(
       continue;
     }
     cCellRepeated = nCellRepeated;
-    
+
     float cBaseSim = baseSims[qid * nProbe + cCell];
     int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
     for (int iter = 0; iter < nIter; iter++ ){
