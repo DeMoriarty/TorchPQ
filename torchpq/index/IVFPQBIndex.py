@@ -101,7 +101,7 @@ class IVFPQBIndex(CellContainer):
       verbose = verbose,
     )
     self._border._is_empty.fill_(0)
-    self._border._cell_size.fill(n_neighbors)
+    self._border._cell_size.fill_(n_neighbors)
 
     border_sims = torch.empty(
       n_cells,
