@@ -325,8 +325,7 @@ class IVFPQBIndex(CellContainer):
       max_sim, max_sim_idx = sims.max(dim=0) #[n_neighbors-1]
       previous_border_sims = self._border_sims[cell, 1:] #[n_neighbor-1]
       final_border_sim, update_mask = torch.stack(
-        previous_border_sims,
-        max_sim
+        (previous_border_sims, max_sim)
       ).max(dim=0) #[n_neighbors-1]
       new_border_idx = max_sim_idx[update_mask]
       self._border_sims[cell, 1:] = final_border_sim
