@@ -193,13 +193,25 @@ class IVFPQBIndex(CellContainer):
 
     self.print_message("searching neighbors...", 1)
     vq_codebook = self.vq_codec.codebook #[d_vector, n_cells]
-    _, topk_neighbors = self.vq_codec.kmeans.topk(
+
+    # _, topk_neighbors = self.vq_codec.kmeans.topk(
+    #   vq_codebook,
+    #   k=self.n_neighbors
+    # ) #TODO: TopkBMMCuda bugged
+    sims = self.vq_codebook.kmeans.sim(
       vq_codebook,
-      k=self.n_neighbors
-    ) #[n_cells, n_neighbors]
-    self._neighboring_cells.data = topk_neighbors[:, :]
-    quantized_vq_codebook = self.encode(vq_codebook)
-    address = torch.arange(self.n_cells, device=self.device) * self.n_neighbors
+      vq_codebook,
+    )
+    _, topk_neighbors = sims.topk(k=self.n_neighbors, dim=-1)
+
+     #[n_cells, n_neighbors]
+    self._neighboring_cells[:] = topk_neighbors
+    quantized_vq_codebook = self.encode(vq_codebook) #[code_size, n_cells]
+    address = torch.arange(
+      self.n_cells,
+      device=self.device
+    ) * self.n_neighbors
+
     self._border.set_data_by_address(
       data = quantized_vq_codebook,
       address = address
