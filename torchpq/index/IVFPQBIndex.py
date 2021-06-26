@@ -94,7 +94,7 @@ class IVFPQBIndex(CellContainer):
       dtype = "uint8",
       device = device,
       initial_size = n_neighbors,
-      expand_step_size = 0,
+      expand_step_size = 1,
       expand_mode = "step",
       use_inverse_id_mapping = False,
       contiguous_size = 4,
