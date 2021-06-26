@@ -462,7 +462,7 @@ class IVFPQBIndex(CellContainer):
       # topk_neighbors = [i if i.shape[0] == self.n_probe else pad(i) for i in topk_neighbors]
       # topk_neighbors = torch.stack(topk_neighbors)
       topk_neighbors = topk_neighbors[:, :self.n_probe]
-      topk_neighbors = topk_neighbors.sort(dim=-1)
+      topk_neighbors, _ = topk_neighbors.sort(dim=-1)
 
       cell_start = self._cell_start[topk_neighbors]
       cell_size = self._cell_size[topk_neighbors]
