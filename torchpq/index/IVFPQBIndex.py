@@ -88,7 +88,7 @@ class IVFPQBIndex(CellContainer):
     )
     self.register_buffer("_neighboring_cells", neighboring_cells)
 
-    self.border = CellContainer(
+    self._border = CellContainer(
       code_size = self.code_size,
       n_cells = n_cells,
       dtype = "uint8",
@@ -100,7 +100,7 @@ class IVFPQBIndex(CellContainer):
       contiguous_size = 4,
       verbose = verbose,
     )
-    self.border._is_empty.fill_(0)
+    self._border._is_empty.fill_(0)
 
     border_sims = torch.zeros(
       n_cells,
@@ -200,7 +200,7 @@ class IVFPQBIndex(CellContainer):
     self._neighboring_cells.data = topk_neighbors[:, :]
     quantized_vq_codebook = self.encode(vq_codebook)
     address = torch.arange(self.n_cells) * self.n_neighbors
-    self._borders.set_data_by_address(
+    self._border.set_data_by_address(
       data = quantized_vq_codebook,
       address = address
     )
@@ -441,11 +441,11 @@ class IVFPQBIndex(CellContainer):
       precomputed = self.pq_codec.precompute_adc(x)
       # Search in borders first
       _, topk_border_address = self._ivfpq_topk.topk(
-        data=self.border._storage,
+        data=self._border._storage,
         precomputed=precomputed,
-        cell_start=self.border._cell_start[coarse_cells],
-        cell_size=self.border._cell_size[coarse_cells],
-        is_empty=self.border._is_empty,
+        cell_start=self._border._cell_start[coarse_cells],
+        cell_size=self._border._cell_size[coarse_cells],
+        is_empty=self._border._is_empty,
         k=256
       )
       topk_neighbors = topk_border_address // self.n_neighbors
