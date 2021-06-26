@@ -101,6 +101,7 @@ class IVFPQBIndex(CellContainer):
       verbose = verbose,
     )
     self._border._is_empty.fill_(0)
+    self._border._cell_size.fill(n_neighbors)
 
     border_sims = torch.empty(
       n_cells,
@@ -463,6 +464,8 @@ class IVFPQBIndex(CellContainer):
         k=256
       )
       topk_neighbors = topk_border_address // self.n_neighbors
+      # topk_neighbors = self._border.get_cell_by_address(topk_border_address)
+      
       # topk_neighbors = [i.unique()[:self.n_probe] for i in topk_neighbors]
       # def pad(x):
       #   y = torch.zeros(
