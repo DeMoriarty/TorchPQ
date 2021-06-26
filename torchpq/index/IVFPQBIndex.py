@@ -102,12 +102,13 @@ class IVFPQBIndex(CellContainer):
     )
     self._border._is_empty.fill_(0)
 
-    border_sims = torch.zeros(
+    border_sims = torch.empty(
       n_cells,
       n_neighbors,
       dtype=torch.float32,
       device=self.device
     )
+    border_sims.fill_(float("-inf"))
     self.register_buffer("_border_sims", border_sims)
 
     self._ivfpq_topk = IVFPQTopk(
@@ -332,8 +333,8 @@ class IVFPQBIndex(CellContainer):
       mask = assigned_cells == cell
       neighbors = self._neighboring_cells[cell, 1:] #[n_neighbors-1]
       neighbor_centroids = vq_codebook[:, neighbors]
-      selected_x = x[:, mask]
-      sims = self.vq_codec.kmeans.sim(selected_x, neighbor_centroids) #[n_subx, n_neighbors-1]
+      selected_x = x[:, mask] #[d_vector, n_selected]
+      sims = self.vq_codec.kmeans.sim(selected_x, neighbor_centroids) #[n_selected, n_neighbors-1]
       max_sim, max_sim_idx = sims.max(dim=0) #[n_neighbors-1]
       previous_border_sims = self._border_sims[cell, 1:] #[n_neighbor-1]
       final_border_sim, update_mask = torch.stack(
