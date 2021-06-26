@@ -199,7 +199,7 @@ class IVFPQBIndex(CellContainer):
     ) #[n_cells, n_neighbors]
     self._neighboring_cells.data = topk_neighbors[:, :]
     quantized_vq_codebook = self.encode(vq_codebook)
-    address = torch.arange(self.n_cells) * self.n_neighbors
+    address = torch.arange(self.n_cells, device=self.device) * self.n_neighbors
     self._border.set_data_by_address(
       data = quantized_vq_codebook,
       address = address
@@ -330,7 +330,9 @@ class IVFPQBIndex(CellContainer):
       new_border_idx = max_sim_idx[update_mask]
       self._border_sims[cell, 1:] = final_border_sim
       address = torch.arange(
-        1, self.n_neighbors
+        1,
+        self.n_neighbors,
+        device=self.device
       ) + cell * self.n_neighbors
 
       self._border.set_data_by_address(
