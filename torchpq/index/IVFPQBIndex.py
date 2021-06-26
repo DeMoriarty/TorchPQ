@@ -1,19 +1,22 @@
 import torch
 import numpy as np
-from .BaseIndex import BaseIndex
-from ..container import CellContainer
+from ..container import CellContainer, FlatContainerGroup
 from ..codec import PQCodec, VQCodec
 from ..kernels import IVFPQTopkCuda
 from ..kernels import IVFPQTop1Cuda
 from .. import util
 from .. import metric
 
-class IVFPQIndex(CellContainer):
+class IVFPQBIndex(CellContainer):
+  """
+    Diplomatic Inverted File Product Quantization
+  """
   def __init__(
       self,
       d_vector,
       n_subvectors=8,
       n_cells=128,
+      n_neighbors = 16,
       initial_size=None,
       expand_step_size=128,
       expand_mode="double",
@@ -27,8 +30,9 @@ class IVFPQIndex(CellContainer):
       max_sm_bytes = util.get_maximum_shared_memory_bytes()
       assert n_subvectors <= max_sm_bytes // 1024
     assert d_vector % n_subvectors == 0
+    assert 0 < n_neighbors <= n_cells
 
-    super(IVFPQIndex, self).__init__(
+    super(IVFPQBIndex, self).__init__(
       code_size = n_subvectors,
       n_cells = n_cells,
       dtype = "uint8",
@@ -43,11 +47,14 @@ class IVFPQIndex(CellContainer):
 
     self.d_vector = d_vector
     self.n_subvectors = n_subvectors
+    self.n_neighbors = n_neighbors
     self.d_subvector = d_vector // n_subvectors
     self.distance = distance
     self.verbose = verbose
+    
+    self.n_probe_coarse = 32
+    self.n_probe = 4
     self.pq_use_residual = pq_use_residual
-    self.n_probe = 1
     if pq_use_residual and (n_cells * 256 * n_subvectors * 4) <= 4*1024**3:
       self._use_precomputed = True
     else:
@@ -72,6 +79,36 @@ class IVFPQIndex(CellContainer):
       distance = distance,
       verbose = verbose
     )
+
+    neighboring_cells = torch.zeros(
+      n_cells,
+      n_neighbors,
+      dtype=torch.long,
+      device=self.device,
+    )
+    self.register_buffer("_neighboring_cells", neighboring_cells)
+
+    self.border = CellContainer(
+      code_size = self.code_size,
+      n_cells = n_cells,
+      dtype = "uint8",
+      device = device,
+      initial_size = n_neighbors,
+      expand_step_size = 0,
+      expand_mode = "step",
+      use_inverse_id_mapping = False,
+      contiguous_size = 4,
+      verbose = verbose,
+    )
+    self.border._is_empty.fill_(0)
+
+    border_sims = torch.zeros(
+      n_cells,
+      n_neighbors,
+      dtype=torch.float32,
+      device=self.device
+    )
+    self.register_buffer("_border_sims", border_sims)
 
     self._ivfpq_topk = IVFPQTopk(
       n_subvectors = n_subvectors,
@@ -153,6 +190,20 @@ class IVFPQIndex(CellContainer):
       self.pq_codec.train(x - recon)
     else:
       self.pq_codec.train(x)
+
+    self.print_message("searching neighbors...", 1)
+    vq_codebook = self.vq_codec.codebook #[d_vector, n_cells]
+    _, topk_neighbors = self.vq_codec.kmeans.topk(
+      vq_codebook,
+      k=self.n_neighbors
+    ) #[n_cells, n_neighbors]
+    self._neighboring_cells.data = topk_neighbors[:, :]
+    quantized_vq_codebook = self.encode(vq_codebook)
+    address = torch.arange(self.n_cells) * n_neighbors
+    self._borders.set_data_by_address(
+      data = quantized_vq_codebook,
+      address = address
+    )
 
     self.print_message("index is trained successfully!", 1)
   
@@ -248,17 +299,47 @@ class IVFPQIndex(CellContainer):
       x = util.normalize(x)
 
     assigned_cells = self.vq_codec.encode(x)
+    # topk_sims, topk_cells = self.vq_codec.kmeans.topk(x, k=self.n_neighbors)
+    # assigned_cells = topk_cells[:, 0]
+    
     if self.pq_use_residual:
       quantized_x, _ = self.encode(x)
     else:
       quantized_x = self.encode(x)
 
-    return super(IVFPQIndex, self).add(
+    returned = super(IVFPQBIndex, self).add(
       quantized_x,
       cells=assigned_cells,
       ids=ids,
       return_address = return_address
     )
+
+    vq_codebook = self.vq_codec.codebook
+    unique_cells = assigned_cells.unique()
+    for cell in unique_cells:
+      mask = assigned_cells == cell
+      neighbors = self._neighboring_cells[cell, 1:] #[n_neighbors-1]
+      neighbor_centroids = vq_codebook[:, neighbors]
+      selected_x = x[:, mask]
+      sims = self.vq_codec.kmeans.sim(selected_x, neighbor_centroids) #[n_subx, n_neighbors-1]
+      max_sim, max_sim_idx = sims.max(dim=0) #[n_neighbors-1]
+      previous_border_sims = self._border_sims[cell, 1:] #[n_neighbor-1]
+      final_border_sim, update_mask = torch.stack(
+        previous_border_sims,
+        max_sim
+      ).max(dim=0) #[n_neighbors-1]
+      new_border_idx = max_sim_idx[update_mask]
+      self._border_sims[cell, 1:] = final_border_sim
+      address = torch.arange(
+        1, self.n_neighbors
+      ) + cell * self.n_neighbors
+
+      self._border.set_data_by_address(
+        data = quantized_x[:, mask][:, new_border_idx],
+        address = address
+      )
+
+    return returned
 
   def precomputed_adc_residual_precomputed(self, x):
     n_query = x.shape[1]
@@ -301,58 +382,7 @@ class IVFPQIndex(CellContainer):
     precomputed = part1[:, None] + part2.permute(1, 2, 0, 3)#[n_query, n_probe, n_sub, 256]
     return precomputed
 
-  def search_cells(self, x, cells, base_sims=None, k=1, return_address=False):
-    storage = self._storage
-    is_empty = self._is_empty
-    vq_codebook = self.vq_codec.codebook
-
-    cell_start = self._cell_start[cells]
-    cell_size = self._cell_size[cells]
-    
-    if self.pq_use_residual:
-      assert base_sims is not None, "base_sims is required when pq_use_residual is True"
-      if self.use_precomputed:
-        part1, part2 = self.precomputed_adc_residual_precomputed(x)
-        topk_val, topk_address = self._ivfpq_topk.topk_residual_precomputed(
-          data=storage,
-          part1=part1,
-          part2=part2,
-          cells=cells,
-          base_sims=base_sims,
-          cell_start=cell_start,
-          cell_size=cell_size,
-          is_empty=is_empty,
-          k=k
-        )
-      else:
-        precomputed = self.precomputed_adc_residual(x, cells)
-        topk_val, topk_address = self._ivfpq_topk.topk_residual(
-          data=storage,
-          base_sims=base_sims,
-          precomputed=precomputed,
-          cell_start=cell_start,
-          cell_size=cell_size,
-          is_empty=is_empty,
-          k=k
-        )
-    else:
-      precomputed = self.pq_codec.precompute_adc(x)
-      topk_val, topk_address = self._ivfpq_topk.topk(
-        data=storage,
-        precomputed=precomputed,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        k=k
-      )
-
-    topk_ids = self.get_id_by_address(topk_address)
-    if return_address:
-      return topk_val, topk_ids, topk_address
-    else:
-      return topk_val, topk_ids
-
-  def search(self, x, k=1, return_address=False):
+  def search(self, x, k=1):
     assert len(x.shape) == 2
     assert x.shape[0] == self.d_vector
     assert 0 < k <= 1024
@@ -363,22 +393,97 @@ class IVFPQIndex(CellContainer):
     is_empty = self._is_empty
     vq_codebook = self.vq_codec.codebook
 
-    # find n_probe closest cells
+    # find n_probe_coarse closest cells
     if self.use_cublas:
       sims = metric.negative_squared_l2_distance(x, vq_codebook)
-      topk_sims, cells = sims.topk(k=self.n_probe, dim=1)
+      topk_sims, coarse_cells = sims.topk(
+        k=self.n_probe_coarse,
+        dim=1
+      ) #[n_query, n_probe_coarse]
     else:
-      topk_sims, cells = self.vq_codec.kmeans.topk(x, k=self.n_probe)
+      topk_sims, coarse_cells = self.vq_codec.kmeans.topk(
+        x,
+        k=self.n_probe_coarse
+      ) #[n_query, n_probe_coarse]
 
-    return self.search_cells(
-      x=x, 
-      cells=cells,
-      base_sims=topk_sims,
-      k=k,
-      return_address=return_address
+    # cells, sorted_cell_indices = torch.sort(cells, dim=-1)
+    # topk_sims = topk_sims[sorted_cell_indices]
+
+    borders = self._borders.view(
+      self.code_size // self.contiguous_size,
+      self.n_cells * self.n_neighbors,
+      self.contiguous_size,
     )
+
+    cell_start = self._cell_start[cells]
+    cell_size = self._cell_size[cells]
     
-    
+    if self.pq_use_residual:
+      if self.use_precomputed:
+        part1, part2 = self.precomputed_adc_residual_precomputed(x)
+        topk_val, topk_address = self._ivfpq_topk.topk_residual_precomputed(
+          data=storage,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=topk_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          k=k
+        )
+      else:
+        precomputed = self.precomputed_adc_residual(x, cells)
+        topk_val, topk_address = self._ivfpq_topk.topk_residual(
+          data=storage,
+          base_sims=topk_sims,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          k=k
+        )
+    else:
+      precomputed = self.pq_codec.precompute_adc(x)
+      # Search in borders first
+      _, topk_border_address = self._ivfpq_topk.topk(
+        data=self.border._storage,
+        precomputed=precomputed,
+        cell_start=self.border._cell_start[coarse_cells],
+        cell_size=self.border._cell_size[coarse_cells],
+        is_empty=self.border._is_empty,
+        k=256
+      )
+      topk_neighbors = topk_border_address // self.n_neighbors
+      # topk_neighbors = [i.unique()[:self.n_probe] for i in topk_neighbors]
+      # def pad(x):
+      #   y = torch.zeros(
+      #     self.n_probe,
+      #     device=x.device, 
+      #     dtype=x.dtype
+      #   ) - 1
+      #   y[:x.shape[0]] = x
+      #   return x
+      # topk_neighbors = [i if i.shape[0] == self.n_probe else pad(i) for i in topk_neighbors]
+      # topk_neighbors = torch.stack(topk_neighbors)
+      topk_neighbors = topk_neighbors[:, :self.n_probe]
+      topk_neighbors = topk_neighbors.sort(dim=-1)
+
+      cell_start = self._cell_start[topk_neighbors]
+      cell_size = self._cell_size[topk_neighbors]
+      cell_size[topk_neighbors < 0] = 0
+
+      topk_val, topk_address = self._ivfpq_topk.topk(
+        data=storage,
+        precomputed=precomputed,
+        cell_start=cell_start,
+        cell_size=cell_size,
+        is_empty=is_empty,
+        k=k
+      )
+
+    topk_ids = self.get_id_by_address(topk_address)
+    return topk_val, topk_ids
 
 
 class IVFPQTopk:
