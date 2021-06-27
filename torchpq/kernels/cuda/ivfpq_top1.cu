@@ -513,65 +513,6 @@ __global__ void ivfpq_top1_residual(
 }
 
 extern "C"
-__global__ void ivfpq_top1_residual_precomputed_v1(
-  const uint8n_t* __restrict__ data,
-  const float* __restrict__ part1,
-  const float* __restrict__ part2,
-  const ll_t* __restrict__ cells,
-  const float* __restrict__ baseSims,
-  const uint8_t* __restrict__ isEmpty,
-  const ll_t* __restrict__ cellStart,
-  const ll_t* __restrict__ cellSize,
-  const ll_t* __restrict__ totalSize,
-  float* __restrict__ gValue,
-  ll_t* __restrict__ gIndex,
-  int nData, int nQuery, int nProbe
-) {
-  const int tid = threadIdx.x; // thread ID
-  const int qid = blockIdx.x; // query ID
-
-  extern __shared__ _VOLATILE_ float sMem[]; // M * K
-  const ll_t threadTotalSize = totalSize[qid];
-  float finalValue = -654321;
-  float finalIndex = -1;
-
-  for (int cCell = 0; cCell < nProbe; cCell++){
-    int cCellStart = cellStart[qid * nProbe + cCell];
-    int cCellSize = cellSize[qid * nProbe + cCell];
-    int iCell = cells[qid * nProbe + cCell];
-    load_precomputed_v3(part1, part2, sMem, iCell);
-    float cBaseSim = baseSims[qid * nProbe + cCell];
-    int cCellEnd = cCellStart + cCellSize;
-    int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
-    for (int iter = 0; iter < nIter; iter++ ){
-      int iN = cCellStart + iter * _TPB_ + tid;
-      float value;
-      float index = iN;
-      int cIsEmpty = 0;
-      if (cCellStart <= iN && iN < cCellEnd){
-        value = cBaseSim;
-        cIsEmpty = isEmpty[iN];
-        uint8n_t dataCache[_M_ / _NCS_];
-        load_data(data, dataCache, iN, nData);
-        consume_data(sMem, dataCache, value);
-      } else {
-        value = -123456.f;
-      }
-      value = cIsEmpty == 0 ? value : -987654.f;
-      index = cIsEmpty == 0 ? index : -1;
-      thread_comparator(finalValue, finalIndex, value, index);
-    }
-  }
-  block_max(finalValue, finalIndex, sMem);
-
-  if (tid == 0){
-    const int writeAddress = qid;
-    gValue[writeAddress] = finalValue;
-    gIndex[writeAddress] = finalIndex;
-  }
-}
-
-extern "C"
 __global__ void ivfpq_top1_residual_precomputed(
   const uint8n_t* __restrict__ data,
   const float* __restrict__ part1,
@@ -649,6 +590,293 @@ __global__ void ivfpq_top1_residual_precomputed(
         value = -INFINITY;
       }
       value = cIsEmpty == 0 ? value : -INFINITY;
+      index = cIsEmpty == 0 ? index : -1;
+      thread_comparator(finalValue, finalIndex, value, index);
+    }
+  }
+  block_max(finalValue, finalIndex, sMem);
+
+  if (tid == 0){
+    const int writeAddress = qid;
+    gValue[writeAddress] = finalValue;
+    gIndex[writeAddress] = finalIndex;
+  }
+}
+
+extern "C"
+__global__ void ivfpq_top1_smart_probing(
+  const uint8n_t* __restrict__ data,
+  const float* __restrict__ precomputed,
+  const uint8_t* __restrict__ isEmpty,
+  const ll_t* __restrict__ cellStart,
+  const ll_t* __restrict__ cellSize,
+  const ll_t* __restrict__ totalSize,
+  const ll_t* __restrict__ nProbeList,
+  float* __restrict__ gValue,
+  ll_t* __restrict__ gIndex,
+  int nData, int nQuery
+) {
+  const int tid = threadIdx.x; // thread ID
+  const int qid = blockIdx.x; // query ID
+  const int nProbe = nProbeList[qid];
+
+  extern __shared__ _VOLATILE_ float sMem[]; // M * K
+  load_precomputed(precomputed, sMem, nQuery);
+  float finalValue = -INFINITY;
+  float finalIndex = -1;
+  const ll_t threadTotalSize = totalSize[qid];
+  const int nIter = (threadTotalSize + _TPB_ - 1) / _TPB_;
+  int cCell = 0;
+  int cCellStart = cellStart[qid * nProbe + cCell];
+  int cCellSize = cellSize[qid * nProbe + cCell];
+  int cCellEnd = cCellStart + cCellSize;
+  int iN = cCellStart + tid;
+
+  for (int i = 0; i < nIter; i++){
+    while (iN >= cCellEnd){
+      cCell ++;  // increment cell index by 1
+      if (cCell >= nProbe)
+        break;
+      int pCellStart = cCellStart;
+      int pCellEnd = cCellEnd;
+      cCellStart = cellStart[qid * nProbe + cCell];
+      if (cCellStart == pCellStart){
+        continue;
+      }
+      cCellSize = cellSize[qid * nProbe + cCell];
+      cCellEnd = cCellStart + cCellSize;
+      iN = iN - pCellEnd + cCellStart;
+    }
+    float value;
+    float index = iN;
+    int cIsEmpty = 0;
+    if (cCellStart <= iN && iN < cCellEnd){
+      value = 0.f;
+      cIsEmpty = isEmpty[iN];
+
+      uint8n_t dataCache[_M_ / _NCS_];
+      load_data(data, dataCache, iN, nData);
+      consume_data(sMem, dataCache, value);
+    } else {
+      value = -INFINITY;
+    }
+    value = cIsEmpty == 0 ? value : -INFINITY;
+    index = cIsEmpty == 0 ? index : -1;
+
+    thread_comparator(finalValue, finalIndex, value, index);
+    iN += _TPB_;
+  }
+  block_max(finalValue, finalIndex, sMem);
+
+  if (tid == 0){
+    const int writeAddress = qid;
+    gValue[writeAddress] = finalValue;
+    gIndex[writeAddress] = finalIndex;
+  }
+}
+
+extern "C"
+__global__ void ivfpq_top1_residual_smart_probing(
+  const uint8n_t* __restrict__ data,
+  const float* __restrict__ precomputed,
+  const float* __restrict__ baseSims,
+  const uint8_t* __restrict__ isEmpty,
+  const ll_t* __restrict__ cellStart,
+  const ll_t* __restrict__ cellSize,
+  const ll_t* __restrict__ totalSize,
+  const ll_t* __restrict__ nProbeList,
+  float* __restrict__ gValue,
+  ll_t* __restrict__ gIndex,
+  int nData, int nQuery
+) {
+  const int tid = threadIdx.x; // thread ID
+  const int qid = blockIdx.x; // query ID
+  const int nProbe = nProbeList[qid];
+
+  extern __shared__ _VOLATILE_ float sMem[]; // M * K
+  const ll_t threadTotalSize = totalSize[qid];
+  float finalValue = -654321;
+  float finalIndex = -1;
+
+  int cCellStart = -1;
+  for (int cCell = 0; cCell < nProbe; cCell++){
+    int pCellStart = cCellStart;
+    cCellStart = cellStart[qid * nProbe + cCell];
+    if (cCellStart == pCellStart){
+      continue;
+    }
+    int cCellSize = cellSize[qid * nProbe + cCell];
+    load_precomputed_v2(precomputed, sMem, cCell, nProbe);
+    float cBaseSim = baseSims[qid * nProbe + cCell];
+    int cCellEnd = cCellStart + cCellSize;
+    int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
+    for (int iter = 0; iter < nIter; iter++ ){
+      int iN = cCellStart + iter * _TPB_ + tid;
+      float value;
+      float index = iN;
+      int cIsEmpty = 0;
+      if (cCellStart <= iN && iN < cCellEnd){
+        value = cBaseSim;
+        cIsEmpty = isEmpty[iN];
+        uint8n_t dataCache[_M_ / _NCS_];
+        load_data(data, dataCache, iN, nData);
+        consume_data(sMem, dataCache, value);
+      } else {
+        value = -123456.f;
+      }
+      value = cIsEmpty == 0 ? value : -987654.f;
+      index = cIsEmpty == 0 ? index : -1;
+      thread_comparator(finalValue, finalIndex, value, index);
+    }
+  }
+  block_max(finalValue, finalIndex, sMem);
+
+  if (tid == 0){
+    const int writeAddress = qid;
+    gValue[writeAddress] = finalValue;
+    gIndex[writeAddress] = finalIndex;
+  }
+}
+
+extern "C"
+__global__ void ivfpq_top1_residual_precomputed_smart_probing(
+  const uint8n_t* __restrict__ data,
+  const float* __restrict__ part1,
+  const float* __restrict__ part2,
+  const ll_t* __restrict__ cells,
+  const float* __restrict__ baseSims,
+  const uint8_t* __restrict__ isEmpty,
+  const ll_t* __restrict__ cellStart,
+  const ll_t* __restrict__ cellSize,
+  const ll_t* __restrict__ totalSize,
+  const ll_t* __restrict__ nProbeList,
+  float* __restrict__ gValue,
+  ll_t* __restrict__ gIndex,
+  int nData, int nQuery
+) {
+  const int tid = threadIdx.x; // thread ID
+  const int qid = blockIdx.x; // query ID
+  const int nProbe = nProbeList[qid];
+
+  extern __shared__ _VOLATILE_ float sMem[]; // M * K
+  const ll_t threadTotalSize = totalSize[qid];
+  float finalValue = -INFINITY;
+  float finalIndex = -1;
+  float part1Cache[_M_];
+  float part2Cache[_M_];
+  load_part1_to_cache(part1, part1Cache);
+
+  int nCellStart = cellStart[qid * nProbe];
+  int nCellSize = cellSize[qid * nProbe];
+  int nCellEnd = nCellStart + nCellSize;
+  int iCell = cells[qid * nProbe];
+  bool nCellRepeated = false;
+  bool cCellRepeated = false;
+  load_part2_to_cache(part2, part2Cache, iCell);
+
+  for (int cCell = 0; cCell < nProbe; cCell++){
+    int cCellStart = nCellStart;
+    int cCellSize = nCellSize;
+    int cCellEnd = nCellEnd;
+    if (!cCellRepeated){
+      store_precomputed_to_smem(part1Cache, part2Cache, sMem);
+    }
+
+    if (cCell < nProbe - 1){
+      int tCellStart = cellStart[qid * nProbe + cCell + 1];
+      if (tCellStart != cCellStart){
+        nCellStart = tCellStart;
+        nCellSize = cellSize[qid * nProbe + cCell + 1];
+        nCellEnd = nCellStart + nCellSize;
+        iCell = cells[qid * nProbe + cCell + 1];
+        load_part2_to_cache(part2, part2Cache, iCell);
+        nCellRepeated = false;
+      } else {
+        nCellRepeated = true;
+      }
+    }
+    if (cCellRepeated){
+      cCellRepeated = nCellRepeated;
+      continue;
+    }
+    cCellRepeated = nCellRepeated;
+
+    float cBaseSim = baseSims[qid * nProbe + cCell];
+    int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
+    for (int iter = 0; iter < nIter; iter++ ){
+      int iN = cCellStart + iter * _TPB_ + tid;
+      float value;
+      float index = iN;
+      int cIsEmpty = 0;
+      if (iN < cCellEnd){
+        value = cBaseSim;
+        cIsEmpty = isEmpty[iN];
+        uint8n_t dataCache[_M_ / _NCS_];
+        load_data(data, dataCache, iN, nData);
+        consume_data(sMem, dataCache, value);
+      } else {
+        value = -INFINITY;
+      }
+      value = cIsEmpty == 0 ? value : -INFINITY;
+      index = cIsEmpty == 0 ? index : -1;
+      thread_comparator(finalValue, finalIndex, value, index);
+    }
+  }
+  block_max(finalValue, finalIndex, sMem);
+
+  if (tid == 0){
+    const int writeAddress = qid;
+    gValue[writeAddress] = finalValue;
+    gIndex[writeAddress] = finalIndex;
+  }
+}
+
+extern "C"
+__global__ void ivfpq_top1_residual_precomputed_v1(
+  const uint8n_t* __restrict__ data,
+  const float* __restrict__ part1,
+  const float* __restrict__ part2,
+  const ll_t* __restrict__ cells,
+  const float* __restrict__ baseSims,
+  const uint8_t* __restrict__ isEmpty,
+  const ll_t* __restrict__ cellStart,
+  const ll_t* __restrict__ cellSize,
+  const ll_t* __restrict__ totalSize,
+  float* __restrict__ gValue,
+  ll_t* __restrict__ gIndex,
+  int nData, int nQuery, int nProbe
+) {
+  const int tid = threadIdx.x; // thread ID
+  const int qid = blockIdx.x; // query ID
+
+  extern __shared__ _VOLATILE_ float sMem[]; // M * K
+  const ll_t threadTotalSize = totalSize[qid];
+  float finalValue = -654321;
+  float finalIndex = -1;
+
+  for (int cCell = 0; cCell < nProbe; cCell++){
+    int cCellStart = cellStart[qid * nProbe + cCell];
+    int cCellSize = cellSize[qid * nProbe + cCell];
+    int iCell = cells[qid * nProbe + cCell];
+    load_precomputed_v3(part1, part2, sMem, iCell);
+    float cBaseSim = baseSims[qid * nProbe + cCell];
+    int cCellEnd = cCellStart + cCellSize;
+    int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
+    for (int iter = 0; iter < nIter; iter++ ){
+      int iN = cCellStart + iter * _TPB_ + tid;
+      float value;
+      float index = iN;
+      int cIsEmpty = 0;
+      if (cCellStart <= iN && iN < cCellEnd){
+        value = cBaseSim;
+        cIsEmpty = isEmpty[iN];
+        uint8n_t dataCache[_M_ / _NCS_];
+        load_data(data, dataCache, iN, nData);
+        consume_data(sMem, dataCache, value);
+      } else {
+        value = -123456.f;
+      }
+      value = cIsEmpty == 0 ? value : -987654.f;
       index = cIsEmpty == 0 ? index : -1;
       thread_comparator(finalValue, finalIndex, value, index);
     }

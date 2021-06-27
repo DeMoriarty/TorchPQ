@@ -71,6 +71,39 @@ class IVFPQTopkCuda(CustomKernel):
       # backend='nvcc',
     )
     self._topk_residual_precomputed_fn.max_dynamic_shared_size_bytes = sm_size
+
+    self._topk_smart_probing_fn = cp.RawKernel(
+      code = code,
+      name = 'ivfpq_topk_smart_probing',
+      options = (
+        '--maxrregcount=255',
+        '--use_fast_math'
+      ),
+      # backend='nvcc',
+    )
+    self._topk_smart_probing_fn.max_dynamic_shared_size_bytes = sm_size
+
+    self._topk_residual_smart_probing_fn = cp.RawKernel(
+      code = code,
+      name = 'ivfpq_topk_residual_smart_probing',
+      options = (
+        '--maxrregcount=255',
+        '--use_fast_math'
+      ),
+      # backend='nvcc',
+    )
+    self._topk_residual_smart_probing_fn.max_dynamic_shared_size_bytes = sm_size
+
+    self._topk_residual_precomputed_smart_probing_fn = cp.RawKernel(
+      code = code,
+      name = 'ivfpq_topk_residual_precomputed_smart_probing',
+      options = (
+        '--maxrregcount=255',
+        '--use_fast_math'
+      ),
+      # backend='nvcc',
+    )
+    self._topk_residual_precomputed_smart_probing_fn.max_dynamic_shared_size_bytes = sm_size
   
   @staticmethod
   def next_power_of_2(x):
@@ -260,6 +293,207 @@ class IVFPQTopkCuda(CustomKernel):
         values.data_ptr(),
         indices.data_ptr(),
         n_data, n_query, n_probe, n_candidates_pow_of_2
+        ],
+      stream=self.stream
+    )
+    return (values[:, :n_candidates], indices[:, :n_candidates])
+
+  def topk_smart_probing(
+      self, data, precomputed,
+      is_empty, cell_start, cell_size,
+      n_probe_list, n_candidates=None
+    ):
+    """
+      data: shape=[n_subvectors // n_cs, n_data, n_cs], dtype=uint8
+      precomputed: shape=[n_query, n_clusters], dtype=float32
+      is_empty: shape=[n_data], dtype=uint8
+      cell_start: shape=[n_query, max_n_probe], dtype=int64
+      cell_size: shape=[n_query, max_n_probe], dtype=int64
+      n_probe_list: shape=[n_query], dtype=int64
+      n_candidates: int, `k` in topk
+    """
+    n_data = data.shape[1]
+    n_query = cell_start.shape[0]
+    n_probe = cell_start.shape[1]
+    assert precomputed.shape == (self.m, n_query, self.k)
+    assert data.shape[0] == self.m // self.n_cs
+    assert data.shape[2] == self.n_cs
+    assert is_empty.shape[0] == n_data
+    assert cell_size.shape[1] == n_probe
+    assert data.dtype == torch.uint8
+    assert precomputed.dtype == torch.float32
+    assert cell_start.dtype == cell_size.dtype == torch.int64
+    assert is_empty.dtype == torch.uint8
+    assert n_probe_list.shape == (n_query, )
+    assert n_probe_list.dtype == torch.int64
+    if n_candidates is None:
+      n_candidates = self.tpb
+    else:
+      assert n_candidates <= self.tpb
+    n_candidates_pow_of_2 = 2 * self.next_power_of_2(math.ceil(n_candidates / 2))
+    assert n_candidates_pow_of_2 in [2 * 2**i for i in range(10)]
+
+    tot_size = cell_size.sum(dim=1)
+    values = torch.empty(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.float32)
+    values.fill_(float("-inf"))
+    indices = torch.zeros(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.int64)
+    threads_per_block = (self.tpb,)
+    blocks_per_grid = (n_query,)
+
+    self._topk_smart_probing_fn(
+      grid=blocks_per_grid,
+      block=threads_per_block,
+      shared_mem = self.sm_size,
+      args=[
+        data.data_ptr(),
+        precomputed.data_ptr(),
+        is_empty.data_ptr(),
+        cell_start.data_ptr(),
+        cell_size.data_ptr(),
+        tot_size.data_ptr(),
+        n_probe_list.data_ptr(),
+        values.data_ptr(),
+        indices.data_ptr(),
+        n_data, n_query, n_candidates_pow_of_2
+        ],
+      stream=self.stream
+    )
+    return (values[:, :n_candidates], indices[:, :n_candidates])
+
+  def topk_residual_smart_probing(
+      self, data, precomputed,
+      is_empty, cell_start, cell_size,
+      base_sims, n_probe_list, n_candidates=None
+    ):
+    """
+      data: shape=[n_subvectors // n_cs, n_data, n_cs], dtype=uint8
+      precomputed: shape=[n_query, max_n_probe, n_subvectors, n_clusters], dtype=float32
+      is_empty: shape=[n_data], dtype=uint8
+      cell_start: shape=[n_query, max_n_probe], dtype=int64
+      cell_size: shape=[n_query, max_n_probe], dtype=int64
+      base_sims: shape=[n_query, max_n_probe], dtype=float32
+      n_probe_list: shape=[n_query], dtype=int64
+      n_candidates: int, `k` in topk
+    """
+    n_data = data.shape[1]
+    n_query = cell_start.shape[0]
+    n_probe = cell_start.shape[1]
+    assert precomputed.shape == (n_query, n_probe, self.m, self.k)
+    assert data.shape == (self.m // self.n_cs, n_data, self.n_cs)
+    assert is_empty.shape == (n_data,)
+    assert cell_size.shape == (n_query, n_probe)
+    assert base_sims.shape == (n_query, n_probe)
+    assert data.dtype == torch.uint8
+    assert precomputed.dtype == torch.float32
+    assert cell_start.dtype == cell_size.dtype == torch.int64
+    assert is_empty.dtype == torch.uint8
+    assert base_sims.dtype == torch.float32
+    assert n_probe_list.shape == (n_query, )
+    assert n_probe_list.dtype == torch.int64
+    precomputed = precomputed.contiguous()
+    base_sims = base_sims.contiguous()
+    if n_candidates is None:
+      n_candidates = self.tpb
+    else:
+      assert n_candidates <= self.tpb
+    n_candidates_pow_of_2 = 2 * self.next_power_of_2(math.ceil(n_candidates / 2))
+    assert n_candidates_pow_of_2 in [2 * 2**i for i in range(10)]
+
+    tot_size = cell_size.sum(dim=1)
+    values = torch.empty(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.float32)
+    values.fill_(float("-inf"))
+    indices = torch.zeros(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.int64)
+    threads_per_block = (self.tpb,)
+    blocks_per_grid = (n_query,)
+
+    self._topk_residual_smart_probing_fn(
+      grid=blocks_per_grid,
+      block=threads_per_block,
+      shared_mem = self.sm_size,
+      args=[
+        data.data_ptr(),
+        precomputed.data_ptr(),
+        base_sims.data_ptr(),
+        is_empty.data_ptr(),
+        cell_start.data_ptr(),
+        cell_size.data_ptr(),
+        tot_size.data_ptr(),
+        n_probe_list.data_ptr(),
+        values.data_ptr(),
+        indices.data_ptr(),
+        n_data, n_query, n_candidates_pow_of_2
+        ],
+      stream=self.stream
+    )
+    return (values[:, :n_candidates], indices[:, :n_candidates])
+
+  def topk_residual_precomputed_smart_probing(
+      self, data, part1, part2, cells, base_sims,
+      is_empty, cell_start, cell_size,
+      n_probe_list, n_candidates=None
+    ):
+    """
+      data: shape=[n_subvectors // n_cs, n_data, n_cs], dtype=uint8
+      part1: shape=[n_query, n_subvectors, n_pq_clusters], dtype=float32
+      part2: shape=[n_cells, n_subvectors, n_pq_clusters], dtype=float32
+      cells: shape=[n_query, max_n_probe], dtype=int64
+      base_sims: shape=[n_query, max_n_probe], dtype=float32
+      is_empty: shape=[n_data], dtype=uint8
+      cell_start: shape=[n_query, max_n_probe], dtype=int64
+      cell_size: shape=[n_query, max_n_probe], dtype=int64
+      n_probe_list: shape=[n_query], dtype=int64
+      n_candidates: int, `k` in topk
+    """
+    n_data = data.shape[1]
+    n_query = cell_start.shape[0]
+    n_probe = cell_start.shape[1]
+    assert data.shape == (self.m // self.n_cs, n_data, self.n_cs)
+    assert is_empty.shape == (n_data,)
+    assert cell_size.shape == (n_query, n_probe)
+    assert base_sims.shape == (n_query, n_probe)
+    assert data.dtype == torch.uint8
+    assert part1.dtype == part2.dtype == torch.float32
+    assert cell_start.dtype == cell_size.dtype == torch.int64
+    assert is_empty.dtype == torch.uint8
+    assert base_sims.dtype == torch.float32
+    assert n_probe_list.shape == (n_query, )
+    assert n_probe_list.dtype == torch.int64
+    part1 = part1.contiguous()
+    part2 = part2.contiguous()
+    cells = cells.contiguous()
+    base_sims = base_sims.contiguous()
+    if n_candidates is None:
+      n_candidates = self.tpb
+    else:
+      assert n_candidates <= self.tpb
+    n_candidates_pow_of_2 = 2 * self.next_power_of_2(math.ceil(n_candidates / 2))
+    assert n_candidates_pow_of_2 in [2 * 2**i for i in range(10)]
+
+    tot_size = cell_size.sum(dim=1)
+    values = torch.empty(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.float32)
+    values.fill_(float("-inf"))
+    indices = torch.zeros(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.int64)
+    threads_per_block = (self.tpb,)
+    blocks_per_grid = (n_query,)
+
+    self._topk_residual_precomputed_smart_probing_fn(
+      grid=blocks_per_grid,
+      block=threads_per_block,
+      shared_mem = self.sm_size,
+      args=[
+        data.data_ptr(),
+        part1.data_ptr(),
+        part2.data_ptr(),
+        cells.data_ptr(),
+        base_sims.data_ptr(),
+        is_empty.data_ptr(),
+        cell_start.data_ptr(),
+        cell_size.data_ptr(),
+        tot_size.data_ptr(),
+        n_probe_list.data_ptr(),
+        values.data_ptr(),
+        indices.data_ptr(),
+        n_data, n_query, n_candidates_pow_of_2
         ],
       stream=self.stream
     )

@@ -54,6 +54,8 @@ class IVFPQIndex(CellContainer):
       self._use_precomputed = False
     self._precomputed_part2 = None
     self._use_cublas = False
+    self._use_smart_probing = True
+    self._smart_probing_temperature = 30.0
 
     self.vq_codec = VQCodec(
       n_clusters = n_cells,
@@ -77,6 +79,7 @@ class IVFPQIndex(CellContainer):
       n_subvectors = n_subvectors,
       contiguous_size = self.contiguous_size,
       sm_size = n_subvectors * 1024,
+      use_smart_probing = self.use_smart_probing
     )
 
   @property
@@ -85,7 +88,27 @@ class IVFPQIndex(CellContainer):
 
   @use_cublas.setter
   def use_cublas(self, value):
+    assert type(value) is bool
     self._use_cublas = value
+
+  @property
+  def use_smart_probing(self):
+    return self._use_smart_probing
+
+  @use_smart_probing.setter
+  def use_smart_probing(self, value):
+    assert type(value) is bool
+    self._use_smart_probing = value
+
+  @property
+  def smart_probing_temperature(self):
+    return self._smart_probing_temperature
+
+  @smart_probing_temperature.setter
+  def smart_probing_temperature(self, value):
+    assert value > 0
+    assert self.use_smart_probing, "set use_smart_probing to True first"
+    self._smart_probing_temperature = value
 
   @property
   def use_precomputed(self):
@@ -93,6 +116,7 @@ class IVFPQIndex(CellContainer):
 
   @use_precomputed.setter
   def use_precomputed(self, value):
+    assert type(value) is bool
     if value:
       assert self.pq_use_residual, " `use_precomputed=True` is only valid when `pq_use_residual` is True"
       assert (self.pq_codec.is_trained and self.vq_codec.is_trained), "index is not trained"
@@ -115,22 +139,66 @@ class IVFPQIndex(CellContainer):
       pq_codebook
     ) * -2 - pq_codebook.norm(dim=1).pow(2)[:, None]
 
-  def set_vq_codec_max_iter(self, value):
+  @property
+  def vq_codec_max_iter(self):
+    return self.vq_codec.kmeans.max_iter
+
+  @vq_codec_max_iter.setter
+  def vq_codec_max_iter(self, value):
+    assert type(value) is int
+    assert value > 0
+    assert not self.vq_codec.is_trained, "vq_codec is already trained"
     self.vq_codec.kmeans.max_iter = value
 
-  def set_vq_codec_n_redo(self, value):
+  @property
+  def vq_codec_n_redo(self):
+    return self.vq_codec.kmeans.n_redo
+
+  @vq_codec_n_redo.setter
+  def vq_codec_n_redo(self, value):
+    assert type(value) is int
+    assert value > 0
+    assert not self.vq_codec.is_trained, "vq_codec is already trained"
     self.vq_codec.kmeans.n_redo = value
   
-  def set_vq_codec_tolerance(self, value):
+  @property
+  def vq_codec_tolerance(self):
+    return self.vq_codec.kmeans.tol
+
+  @vq_codec_tolerance.setter
+  def vq_codec_tolerance(self, value):
+    assert not self.vq_codec.is_trained, "vq_codec is already trained"
     self.vq_codec.kmeans.tol = value
 
-  def set_pq_codec_max_iter(self, value):
+  @property
+  def pq_codec_max_iter(self):
+    return self.pq_codec.kmeans.max_iter
+  
+  @pq_codec_max_iter.setter
+  def pq_codec_max_iter(self, value):
+    assert type(value) is int
+    assert value > 0
+    assert not self.pq_codec.is_trained, "pq_codec is already trained"
     self.pq_codec.kmeans.max_iter = value
 
-  def set_pq_codec_n_redo(self, value):
+  @property
+  def pq_codec_n_redo(self):
+    return self.pq_codec.kmeans.n_redo
+
+  @pq_codec_n_redo.setter
+  def pq_codec_n_redo(self, value):
+    assert type(value) is int
+    assert value > 0
+    assert not self.pq_codec.is_trained, "pq_codec is already trained"
     self.pq_codec.kmeans.n_redo = value
 
-  def set_pq_codec_tolerance(self, value):
+  @property
+  def pq_codec_tolerance(self):
+    return self.pq_codec.kmeans.tol
+  
+  @pq_codec_tolerance.setter
+  def pq_codec_tolerance(self, value):
+    assert not self.pq_codec.is_trained, "pq_codec is already trained"
     self.pq_codec.kmeans.tol = value
 
   def train(self, x, force_retrain = False):
@@ -301,7 +369,15 @@ class IVFPQIndex(CellContainer):
     precomputed = part1[:, None] + part2.permute(1, 2, 0, 3)#[n_query, n_probe, n_sub, 256]
     return precomputed
 
-  def search_cells(self, x, cells, base_sims=None, k=1, return_address=False):
+  def search_cells(
+      self,
+      x,
+      cells,
+      base_sims=None,
+      n_probe_list=None,
+      k=1,
+      return_address=False
+    ):
     storage = self._storage
     is_empty = self._is_empty
     vq_codebook = self.vq_codec.codebook
@@ -322,6 +398,7 @@ class IVFPQIndex(CellContainer):
           cell_start=cell_start,
           cell_size=cell_size,
           is_empty=is_empty,
+          n_probe_list=n_probe_list,
           k=k
         )
       else:
@@ -333,6 +410,7 @@ class IVFPQIndex(CellContainer):
           cell_start=cell_start,
           cell_size=cell_size,
           is_empty=is_empty,
+          n_probe_list=n_probe_list,
           k=k
         )
     else:
@@ -343,6 +421,7 @@ class IVFPQIndex(CellContainer):
         cell_start=cell_start,
         cell_size=cell_size,
         is_empty=is_empty,
+        n_probe_list=n_probe_list,
         k=k
       )
 
@@ -369,20 +448,37 @@ class IVFPQIndex(CellContainer):
       topk_sims, cells = sims.topk(k=self.n_probe, dim=1)
     else:
       topk_sims, cells = self.vq_codec.kmeans.topk(x, k=self.n_probe)
+    
+    if self.use_smart_probing and self.n_probe > 1:
+      p = -topk_sims.abs().sqrt()
+      p = torch.softmax(p / self.temperature, dim=-1)
+      p_norm = p.norm(dim=-1)
+      sqrt_d = self.n_probe ** 0.5
+      score = 1 - (p_norm * sqrt_d - 1) / (sqrt_d - 1) - 1e-6
+      n_probe_list = torch.ceil(score * (self.n_probe) ).long()
+      # print("average new n probe", new_n_probe.float().mean() / self.n_probe)
+    else:
+      n_probe_list = None
 
     return self.search_cells(
       x=x, 
       cells=cells,
       base_sims=topk_sims,
+      n_probe_list=n_probe_list,
       k=k,
-      return_address=return_address
+      return_address=False
     )
     
     
 
 
 class IVFPQTopk:
-  def __init__(self, n_subvectors, contiguous_size=4, sm_size=48*1024):
+  def __init__(
+      self,
+      n_subvectors,
+      contiguous_size=4,
+      sm_size=48*1024,
+    ):
     self.n_subvectors = n_subvectors
     self.contiguous_size = contiguous_size
     self.sm_size = sm_size
@@ -430,45 +526,88 @@ class IVFPQTopk:
       cell_start,
       cell_size,
       is_empty,
+      n_probe_list=None,
       k=256
     ):
     assert 0 < k <= 1024
-    if k == 1:
-      return self._top1_cuda.top1(
-        data=data,
-        precomputed=precomputed,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
-    elif 1 < k <= 256:
-      return self._top256_cuda.topk(
-        data=data,
-        precomputed=precomputed,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
-    elif 256 < k <= 512:
-      return self._top512_cuda.topk(
-        data=data,
-        precomputed=precomputed,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
-    elif 512 < k <= 1024:
-      return self._top1024_cuda.topk(
-        data=data,
-        precomputed=precomputed,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
+    if n_probe_list is not None:
+      if k == 1:
+        return self._top1_cuda.top1_smart_probing(
+          data=data,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+      elif 1 < k <= 256:
+        return self._top256_cuda.topk_smart_probing(
+          data=data,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+      elif 256 < k <= 512:
+        return self._top512_cuda.topk_smart_probing(
+          data=data,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+      elif 512 < k <= 1024:
+        return self._top1024_cuda.topk_smart_probing(
+          data=data,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+    else:
+      if k == 1:
+        return self._top1_cuda.top1(
+          data=data,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
+      elif 1 < k <= 256:
+        return self._top256_cuda.topk(
+          data=data,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
+      elif 256 < k <= 512:
+        return self._top512_cuda.topk(
+          data=data,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
+      elif 512 < k <= 1024:
+        return self._top1024_cuda.topk(
+          data=data,
+          precomputed=precomputed,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
   
   def topk_residual(
       self,
@@ -478,49 +617,96 @@ class IVFPQTopk:
       cell_size,
       base_sims,
       is_empty,
+      n_probe_list=None,
       k=256
     ):
     assert 0 < k <= 1024
-    if k == 1:
-      return self._top1_cuda.top1_residual(
-        data=data,
-        precomputed=precomputed,
-        base_sims=base_sims,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
-    elif 1 < k <= 256:
-      return self._top256_cuda.topk_residual(
-        data=data,
-        precomputed=precomputed,
-        base_sims=base_sims,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
-    elif 256 < k <= 512:
-      return self._top512_cuda.topk_residual(
-        data=data,
-        precomputed=precomputed,
-        base_sims=base_sims,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
-    elif 512 < k <= 1024:
-      return self._top1024_cuda.topk_residual(
-        data=data,
-        precomputed=precomputed,
-        base_sims=base_sims,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
+    if n_probe_list is not None:
+      if k == 1:
+        return self._top1_cuda.top1_residual_smart_probing(
+          data=data,
+          precomputed=precomputed,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+      elif 1 < k <= 256:
+        return self._top256_cuda.topk_residual_smart_probing(
+          data=data,
+          precomputed=precomputed,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+      elif 256 < k <= 512:
+        return self._top512_cuda.topk_residual_smart_probing(
+          data=data,
+          precomputed=precomputed,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+      elif 512 < k <= 1024:
+        return self._top1024_cuda.topk_residual_smart_probing(
+          data=data,
+          precomputed=precomputed,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+    else:
+      if k == 1:
+        return self._top1_cuda.top1_residual(
+          data=data,
+          precomputed=precomputed,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
+      elif 1 < k <= 256:
+        return self._top256_cuda.topk_residual(
+          data=data,
+          precomputed=precomputed,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
+      elif 256 < k <= 512:
+        return self._top512_cuda.topk_residual(
+          data=data,
+          precomputed=precomputed,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
+      elif 512 < k <= 1024:
+        return self._top1024_cuda.topk_residual(
+          data=data,
+          precomputed=precomputed,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
 
   def topk_residual_precomputed(
       self,
@@ -532,56 +718,111 @@ class IVFPQTopk:
       cells,
       base_sims,
       is_empty,
+      n_probe_list=None,
       k=256
     ):
     assert 0 < k <= 1024
-    if k == 1:
-      return self._top1_cuda.top1_residual_precomputed(
-        data=data,
-        part1=part1,
-        part2=part2,
-        cells=cells,
-        base_sims=base_sims,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
-    elif 1 < k <= 256:
-      return self._top256_cuda.topk_residual_precomputed(
-        data=data,
-        part1=part1,
-        part2=part2,
-        cells=cells,
-        base_sims=base_sims,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
-    elif 256 < k <= 512:
-      return self._top512_cuda.topk_residual_precomputed(
-        data=data,
-        part1=part1,
-        part2=part2,
-        cells=cells,
-        base_sims=base_sims,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
-    elif 512 < k <= 1024:
-      return self._top1024_cuda.topk_residual_precomputed(
-        data=data,
-        part1=part1,
-        part2=part2,
-        cells=cells,
-        base_sims=base_sims,
-        cell_start=cell_start,
-        cell_size=cell_size,
-        is_empty=is_empty,
-        n_candidates=k
-      )
+    if n_probe_list is not None:
+      if k == 1:
+        return self._top1_cuda.top1_residual_precomputed_smart_probing(
+          data=data,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+      elif 1 < k <= 256:
+        return self._top256_cuda.topk_residual_precomputed_smart_probing(
+          data=data,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+      elif 256 < k <= 512:
+        return self._top512_cuda.topk_residual_precomputed_smart_probing(
+          data=data,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+      elif 512 < k <= 1024:
+        return self._top1024_cuda.topk_residual_precomputed_smart_probing(
+          data=data,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_probe_list=n_probe_list,
+          n_candidates=k
+        )
+    else:
+      if k == 1:
+        return self._top1_cuda.top1_residual_precomputed(
+          data=data,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
+      elif 1 < k <= 256:
+        return self._top256_cuda.topk_residual_precomputed(
+          data=data,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
+      elif 256 < k <= 512:
+        return self._top512_cuda.topk_residual_precomputed(
+          data=data,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
+      elif 512 < k <= 1024:
+        return self._top1024_cuda.topk_residual_precomputed(
+          data=data,
+          part1=part1,
+          part2=part2,
+          cells=cells,
+          base_sims=base_sims,
+          cell_start=cell_start,
+          cell_size=cell_size,
+          is_empty=is_empty,
+          n_candidates=k
+        )
 
   
