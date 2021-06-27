@@ -869,11 +869,9 @@ __global__ void ivfpq_topk(
     iN = iN - pCellEnd + cCellStart;
   }
   if (cCellStart <= iN && iN < cCellEnd){
-    if (i < nIter - 1){
-      nIsEmpty = isEmpty[iN];
-      load_data(data, dataCache, iN, nData);
-      outOfRange = false;
-    }
+    nIsEmpty = isEmpty[iN];
+    load_data(data, dataCache, iN, nData);
+    outOfRange = false;
   } else {
     outOfRange = true;
   }
@@ -901,7 +899,9 @@ __global__ void ivfpq_topk(
     uint8n_t cDataCache[_M_ / _NCS_];
     
     if (!outOfRange){
-      cDataCache = dataCache;
+      for (int i=0; i< _M_/_NCS_; i++){
+        cDataCache[i] = dataCache[i];
+      }
       cIsEmpty = nIsEmpty; 
     }
 
