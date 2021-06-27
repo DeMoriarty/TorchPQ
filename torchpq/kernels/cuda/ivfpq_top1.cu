@@ -614,7 +614,7 @@ __global__ void ivfpq_top1_smart_probing(
   const ll_t* __restrict__ nProbeList,
   float* __restrict__ gValue,
   ll_t* __restrict__ gIndex,
-  int nData, int nQuery
+  int nData, int nQuery, int maxNProbe
 ) {
   const int tid = threadIdx.x; // thread ID
   const int qid = blockIdx.x; // query ID
@@ -627,8 +627,8 @@ __global__ void ivfpq_top1_smart_probing(
   const ll_t threadTotalSize = totalSize[qid];
   const int nIter = (threadTotalSize + _TPB_ - 1) / _TPB_;
   int cCell = 0;
-  int cCellStart = cellStart[qid * nProbe + cCell];
-  int cCellSize = cellSize[qid * nProbe + cCell];
+  int cCellStart = cellStart[qid * maxNProbe + cCell];
+  int cCellSize = cellSize[qid * maxNProbe + cCell];
   int cCellEnd = cCellStart + cCellSize;
   int iN = cCellStart + tid;
 
@@ -639,11 +639,11 @@ __global__ void ivfpq_top1_smart_probing(
         break;
       int pCellStart = cCellStart;
       int pCellEnd = cCellEnd;
-      cCellStart = cellStart[qid * nProbe + cCell];
+      cCellStart = cellStart[qid * maxNProbe + cCell];
       if (cCellStart == pCellStart){
         continue;
       }
-      cCellSize = cellSize[qid * nProbe + cCell];
+      cCellSize = cellSize[qid * maxNProbe + cCell];
       cCellEnd = cCellStart + cCellSize;
       iN = iN - pCellEnd + cCellStart;
     }
@@ -687,7 +687,7 @@ __global__ void ivfpq_top1_residual_smart_probing(
   const ll_t* __restrict__ nProbeList,
   float* __restrict__ gValue,
   ll_t* __restrict__ gIndex,
-  int nData, int nQuery
+  int nData, int nQuery, int maxNProbe
 ) {
   const int tid = threadIdx.x; // thread ID
   const int qid = blockIdx.x; // query ID
@@ -701,13 +701,13 @@ __global__ void ivfpq_top1_residual_smart_probing(
   int cCellStart = -1;
   for (int cCell = 0; cCell < nProbe; cCell++){
     int pCellStart = cCellStart;
-    cCellStart = cellStart[qid * nProbe + cCell];
+    cCellStart = cellStart[qid * maxNProbe + cCell];
     if (cCellStart == pCellStart){
       continue;
     }
-    int cCellSize = cellSize[qid * nProbe + cCell];
-    load_precomputed_v2(precomputed, sMem, cCell, nProbe);
-    float cBaseSim = baseSims[qid * nProbe + cCell];
+    int cCellSize = cellSize[qid * maxNProbe + cCell];
+    load_precomputed_v2(precomputed, sMem, cCell, maxNProbe);
+    float cBaseSim = baseSims[qid * maxNProbe + cCell];
     int cCellEnd = cCellStart + cCellSize;
     int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
     for (int iter = 0; iter < nIter; iter++ ){
@@ -752,7 +752,7 @@ __global__ void ivfpq_top1_residual_precomputed_smart_probing(
   const ll_t* __restrict__ nProbeList,
   float* __restrict__ gValue,
   ll_t* __restrict__ gIndex,
-  int nData, int nQuery
+  int nData, int nQuery, int maxNProbe
 ) {
   const int tid = threadIdx.x; // thread ID
   const int qid = blockIdx.x; // query ID
@@ -766,10 +766,10 @@ __global__ void ivfpq_top1_residual_precomputed_smart_probing(
   float part2Cache[_M_];
   load_part1_to_cache(part1, part1Cache);
 
-  int nCellStart = cellStart[qid * nProbe];
-  int nCellSize = cellSize[qid * nProbe];
+  int nCellStart = cellStart[qid * maxNProbe];
+  int nCellSize = cellSize[qid * maxNProbe];
   int nCellEnd = nCellStart + nCellSize;
-  int iCell = cells[qid * nProbe];
+  int iCell = cells[qid * maxNProbe];
   bool nCellRepeated = false;
   bool cCellRepeated = false;
   load_part2_to_cache(part2, part2Cache, iCell);
@@ -783,12 +783,12 @@ __global__ void ivfpq_top1_residual_precomputed_smart_probing(
     }
 
     if (cCell < nProbe - 1){
-      int tCellStart = cellStart[qid * nProbe + cCell + 1];
+      int tCellStart = cellStart[qid * maxNProbe + cCell + 1];
       if (tCellStart != cCellStart){
         nCellStart = tCellStart;
-        nCellSize = cellSize[qid * nProbe + cCell + 1];
+        nCellSize = cellSize[qid * maxNProbe + cCell + 1];
         nCellEnd = nCellStart + nCellSize;
-        iCell = cells[qid * nProbe + cCell + 1];
+        iCell = cells[qid * maxNProbe + cCell + 1];
         load_part2_to_cache(part2, part2Cache, iCell);
         nCellRepeated = false;
       } else {
@@ -801,7 +801,7 @@ __global__ void ivfpq_top1_residual_precomputed_smart_probing(
     }
     cCellRepeated = nCellRepeated;
 
-    float cBaseSim = baseSims[qid * nProbe + cCell];
+    float cBaseSim = baseSims[qid * maxNProbe + cCell];
     int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
     for (int iter = 0; iter < nIter; iter++ ){
       int iN = cCellStart + iter * _TPB_ + tid;

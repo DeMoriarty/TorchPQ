@@ -327,7 +327,7 @@ class IVFPQTop1Cuda(CustomKernel):
         n_probe_list.data_ptr(),
         values.data_ptr(),
         indices.data_ptr(),
-        n_data, n_query
+        n_data, n_query, n_probe
         ],
       stream=self.stream
     )
@@ -386,7 +386,7 @@ class IVFPQTop1Cuda(CustomKernel):
         n_probe_list.data_ptr(),
         values.data_ptr(),
         indices.data_ptr(),
-        n_data, n_query
+        n_data, n_query, n_probe
         ],
       stream=self.stream
     )
@@ -453,7 +453,7 @@ class IVFPQTop1Cuda(CustomKernel):
         n_probe_list.data_ptr(),
         values.data_ptr(),
         indices.data_ptr(),
-        n_data, n_query
+        n_data, n_query, n_probe
         ],
       stream=self.stream
     )
