@@ -79,7 +79,6 @@ class IVFPQIndex(CellContainer):
       n_subvectors = n_subvectors,
       contiguous_size = self.contiguous_size,
       sm_size = n_subvectors * 1024,
-      use_smart_probing = self.use_smart_probing
     )
 
   @property
