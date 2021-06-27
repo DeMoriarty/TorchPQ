@@ -682,7 +682,7 @@ __device__ void consume_data(
 }
 
 extern "C"
-__global__ void ivfpq_topk_v1(
+__global__ void ivfpq_topk(
   const uint8n_t* __restrict__ data,
   const float* __restrict__ precomputed,
   const uint8_t* __restrict__ isEmpty,
@@ -711,14 +711,14 @@ __global__ void ivfpq_topk_v1(
   for (int i = 0; i < nIter; i++){
     while (iN >= cCellEnd){
       cCell ++;  // increment cell index by 1
-      if (cCell >= nProbe)
+      if (unlikely(cCell >= nProbe))
         break;
       int pCellEnd = cCellEnd;
-      int pCellStart = cCellStart;
+      // int pCellStart = cCellStart;
       cCellStart = cellStart[qid * nProbe + cCell];
-      if (cCellStart == pCellStart){
-        continue;
-      }
+      // if (cCellStart == pCellStart){
+      //   continue;
+      // }
       cCellSize = cellSize[qid * nProbe + cCell];
       cCellEnd = cCellStart + cCellSize;
       iN = iN - pCellEnd + cCellStart;
@@ -726,16 +726,13 @@ __global__ void ivfpq_topk_v1(
     float value;
     float index = iN;
     int cIsEmpty = 0;
-    if (cCellStart <= iN && iN < cCellEnd){
+    // if (cCellStart <= iN && iN < cCellEnd){
+    if (likely(iN < cCellEnd)){
       value = 0.f;
       cIsEmpty = isEmpty[iN];
-      //load_consume_data(data, sMem, value, iN, nData);
-
       uint8n_t dataCache[_M_ / _NCS_];
       load_data(data, dataCache, iN, nData);
       consume_data(sMem, dataCache, value);
-      /*
-      */
     } else {
       value = -INFINITY;
     }
@@ -824,7 +821,7 @@ __global__ void ivfpq_topk_v1(
 }
 
 extern "C"
-__global__ void ivfpq_topk(
+__global__ void ivfpq_topk_v2(
   const uint8n_t* __restrict__ data,
   const float* __restrict__ precomputed,
   const uint8_t* __restrict__ isEmpty,
