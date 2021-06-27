@@ -413,8 +413,8 @@ __global__ void ivfpq_top1(
       cCell ++;  // increment cell index by 1
       if (cCell >= nProbe)
         break;
+      int pCellEnd = cCellEnd;
       int pCellStart = cCellStart;
-      // int pCellEnd = cCellEnd;
       cCellStart = cellStart[qid * nProbe + cCell];
       // if (cCellStart == pCellStart){
       //   continue;
