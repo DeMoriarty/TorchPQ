@@ -414,11 +414,11 @@ __global__ void ivfpq_top1(
       if (cCell >= nProbe)
         break;
       int pCellStart = cCellStart;
-      int pCellEnd = cCellEnd;
+      // int pCellEnd = cCellEnd;
       cCellStart = cellStart[qid * nProbe + cCell];
-      if (cCellStart == pCellStart){
-        continue;
-      }
+      // if (cCellStart == pCellStart){
+      //   continue;
+      // }
       cCellSize = cellSize[qid * nProbe + cCell];
       cCellEnd = cCellStart + cCellSize;
       iN = iN - pCellEnd + cCellStart;
@@ -426,10 +426,9 @@ __global__ void ivfpq_top1(
     float value;
     float index = iN;
     int cIsEmpty = 0;
-    if (cCellStart <= iN && iN < cCellEnd){
+    if (likely(iN < cCellEnd)){
       value = 0.f;
       cIsEmpty = isEmpty[iN];
-
       uint8n_t dataCache[_M_ / _NCS_];
       load_data(data, dataCache, iN, nData);
       consume_data(sMem, dataCache, value);

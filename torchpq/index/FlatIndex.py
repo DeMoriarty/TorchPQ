@@ -1,9 +1,17 @@
 import torch
 import numpy as np
-from .BaseIndex import BaseIndex
+from ..container import FlatContainer
 
-class FlatIndex(BaseIndex):
-  def __init__(self):
+class FlatIndex(FlatContainer):
+  def __init__(
+      self,
+      d_vector,
+      initial_size=None,
+      expand_step_size=1024,
+      expand_mode="double",
+      device="cuda:0",
+      distance=""
+    ):
     super(FlatIndex, self).__init__()
 
   def train(self, x):

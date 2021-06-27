@@ -298,7 +298,8 @@ class KMeans(CustomModule):
       required = (m*n + max(m, n) + m*d + n*d) * data.element_size()
     elif self.distance in ["cosine", "inner"]:
       required = ((m*n) + (m+n)*(d+1)) * data.element_size()
-    if remaining >= required:
+    # if remaining >= required:
+    if False:
       sims = self.sim(data, centroids, inplace=False) #[m, n]
       maxsims, labels = sims.max(dim=-1) #[m]
       return (maxsims, labels)
