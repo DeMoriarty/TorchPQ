@@ -450,7 +450,7 @@ class IVFPQIndex(CellContainer):
     
     if self.use_smart_probing and self.n_probe > 1:
       p = -topk_sims.abs().sqrt()
-      p = torch.softmax(p / self.temperature, dim=-1)
+      p = torch.softmax(p / self.smart_probing_temperature, dim=-1)
       p_norm = p.norm(dim=-1)
       sqrt_d = self.n_probe ** 0.5
       score = 1 - (p_norm * sqrt_d - 1) / (sqrt_d - 1) - 1e-6
