@@ -392,7 +392,7 @@ class IVFPQTop1Cuda(CustomKernel):
     )
     return (values, indices)
 
-  def top1_residual_precomputed(
+  def top1_residual_precomputed_smart_probing(
       self, data, part1, part2, cells, base_sims,
       is_empty, cell_start, cell_size, n_probe_list, n_candidates=1):
     """
