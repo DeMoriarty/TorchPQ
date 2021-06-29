@@ -217,7 +217,12 @@ class IVFPQIndex(CellContainer):
     self.print_message("start training PQ codec...", 1)
     if self.pq_use_residual:
       recon = self.vq_codec.decode(code)
-      self.pq_codec.train(x - recon)
+      x.sub_(recon)
+      del recon
+      self.pq_codec.train(x)
+      recon = self.vq_codec.decode(code)
+      x.add_(recon)
+      del recon
     else:
       self.pq_codec.train(x)
 
