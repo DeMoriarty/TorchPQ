@@ -412,6 +412,7 @@ class CellContainer(BaseContainer):
     self.set_data_by_address(data, write_address)
 
     self._address2id[write_address] = ids
+    self._max_id = max(self._max_id, ids.max().item())
     self._is_empty[write_address] = 0
 
     # update number of stored items in each cell

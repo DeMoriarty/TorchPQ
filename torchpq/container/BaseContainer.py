@@ -26,6 +26,7 @@ class BaseContainer(CustomModule, ABC):
     self.expand_step_size = expand_step_size
     self.expand_mode = expand_mode
     self.use_inverse_id_mapping = use_inverse_id_mapping
+    self._max_id = -1
 
     _address2id = torch.ones(
       initial_size,
@@ -45,7 +46,8 @@ class BaseContainer(CustomModule, ABC):
 
   @property
   def max_id(self):
-    return self._address2id.max().item() 
+    return self._max_id
+    # return self._address2id.max().item() 
 
   def empty(self):
     self._address2id.fill_(-1)
