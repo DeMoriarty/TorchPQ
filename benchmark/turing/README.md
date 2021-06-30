@@ -12,6 +12,7 @@
 - number of base vectors: 1,000,000
 - number of query vectors: 10,000
 - vector dimentions: 128
+- runtime is average of 30 runs
 
 ### Test device: 1 x Tesla T4 (Turing)
 
