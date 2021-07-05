@@ -13,5 +13,8 @@ from . import metric
 from . import util
 from . import old
 from . import index
+from . import fn
 
 from .CustomModule import CustomModule
+
+topk = fn.Topk()
