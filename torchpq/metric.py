@@ -39,6 +39,7 @@ def negative_squared_l2_distance(a, b, inplace=False, use_tensor_core=False):
     if use_tensor_core:
       y = a.transpose(-2, -1).half() @ b.half()
       y = y.float()
+      print(y)
     else:
       y = a.transpose(-2, -1) @ b # [m, n] <m*n*4>
     y.mul_(2)
