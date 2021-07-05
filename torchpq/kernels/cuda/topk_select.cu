@@ -718,11 +718,6 @@ __global__ void topk_select(
     }
     #pragma unroll
     for (int j=0; j < _TN_; j++){
-      ll_t iN = i * _TPB_ * _TN_ + j * _TPB_ + tid;
-      // prevent over-read
-      if (iN >= N){
-        break;
-      }
       pair newPair = working[j];
       pair oldPair;
       oldPair.value = -INFINITY;

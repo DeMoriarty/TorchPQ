@@ -466,7 +466,7 @@ class IVFPQIndex(CellContainer):
       
       max_n_probe = torch.tensor(self.n_probe, device=self.device)
       normalized_entropy = - torch.sum(p * torch.log2(p) / torch.log2(max_n_probe), dim=-1)
-      n_probe_list = torch.ceil(normalized_entropy * (max_n_probe) ).long()
+      n_probe_list = torch.ceil(normalized_entropy * max_n_probe ).long()
     else:
       n_probe_list = None
 
