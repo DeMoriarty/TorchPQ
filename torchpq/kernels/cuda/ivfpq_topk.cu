@@ -441,7 +441,7 @@ __device__ void bitonic_sort_global_1024(
   _VOLATILE_ float sMem[],
   int laneID
 ) {
-  if (_TPB_ - 256 <= threadIdx.x){
+  if (_TPB_ - 1024 <= threadIdx.x){
     thread_comparator(value, index, otherValue, otherIndex, 0);
     block_comparator(value, index, 512, !bfe(laneID, 9), laneID, sMem);
     block_comparator(value, index, 256, !bfe(laneID, 8), laneID, sMem);
