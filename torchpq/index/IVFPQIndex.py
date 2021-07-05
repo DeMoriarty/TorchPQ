@@ -450,7 +450,8 @@ class IVFPQIndex(CellContainer):
 
     # find n_probe closest cells
     if self.use_cublas:
-      sims = metric.negative_squared_l2_distance(x.half(), vq_codebook.half())
+      # sims = metric.negative_squared_l2_distance(x.half(), vq_codebook.half())
+      sims = metric.negative_squared_l2_distance(x, vq_codebook)
       sims = sims.float().contiguous()
       topk_sims, cells = self._topk(sims, k=self.n_probe, dim=1)
     else:
