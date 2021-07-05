@@ -27,7 +27,7 @@ def cosine_similarity(a, b, normalize=True, inplace=False):
     b.mul_(b_norm)
   return prod
 
-def negative_squared_l2_distance(a, b, inplace=False):
+def negative_squared_l2_distance(a, b, inplace=False, use_tensor_core=False):
     """
       Compute batched negative squared euclidean (l2) distance between 'a' and 'b'
       a: torch.Tensor, shape : [l, d_vector, m]
@@ -36,7 +36,10 @@ def negative_squared_l2_distance(a, b, inplace=False):
       returns: torch.Tensor, shape : [l, m, n]
     """
     # peak mem usage: m*n*4 + max(m,n)*4 + inplace ? 0: (m+n)*d*4
-    y = a.transpose(-2, -1) @ b # [m, n] <m*n*4>
+    if use_tensor_core:
+      y = torch.matmul(a.half().transpose(-2, -1), b.half()).float()
+    else:
+      y = a.transpose(-2, -1) @ b # [m, n] <m*n*4>
     y.mul_(2)
     if inplace:
       a.pow_(2)
