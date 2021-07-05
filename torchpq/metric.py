@@ -37,8 +37,7 @@ def negative_squared_l2_distance(a, b, inplace=False, use_tensor_core=False):
     """
     # peak mem usage: m*n*4 + max(m,n)*4 + inplace ? 0: (m+n)*d*4
     if use_tensor_core:
-      with torch.cuda.amp.autocast(enabled=True):
-        y = torch.matmul(a.half().transpose(-2, -1), b.half())
+      y = a.transpose(-2, -1).half() @ b.half()
       y = y.float()
     else:
       y = a.transpose(-2, -1) @ b # [m, n] <m*n*4>
