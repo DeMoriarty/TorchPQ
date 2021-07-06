@@ -760,6 +760,64 @@ __device__ void sort(
   }
 }
 
+__device__ bool is_stack_empty(
+  int stackSize
+){
+  return stackSize <= 0;
+}
+
+__device__ bool is_stack_full(
+  int stackSize
+){
+  return stackSize >= _STACKCAP_ - 1;
+}
+
+__device__ void push_stack(
+  pair stack[_STACKCAP_],
+  pair newPair,
+  int &stackSize
+) {
+  if (is_stack_full(stackSize)){
+    return;
+  } else {
+    #pragma unroll
+    for (int i = _STACKCAP_ - 1; i >= 1; i--){
+      stack[i] = stack[i - 1];
+    }
+    stack[0] = newPair;
+    stackSize ++;
+  }
+}
+
+__device__ void pop_stack(
+  pair stack[_STACKCAP_],
+  pair &outPair,
+  int &stackSize
+) {
+  if (is_stack_empty(stackSize)){
+    return;
+  } else {
+    outPair = stack[0];
+    #pragma unroll
+    for (int i=0; i<_STACKCAP_-1; i++){
+      stack[i] = stack[i+1];
+    }
+    stackSize--;
+  }
+}
+
+__device__ void init_stack(
+  pair stack[_STACKCAP_]
+){
+  pair emptyPair;
+  emptyPair.value = -INFINITY;
+  emptyPair.index = -1;
+  #pragma unroll
+  for (int i=0; i < _STACKCAP_; i++){
+    stack[i] = emptyPair;
+  }
+}
+
 extern "C"
 __global__ void ivfpq_topk(
   const uint8n_t* __restrict__ data,
