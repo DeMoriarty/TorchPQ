@@ -12,6 +12,7 @@ class IVFPQTopkCuda(CustomKernel):
       k=256,
       tpb=256,
       n_cs=4,
+      stack_capacity=4,
       sm_size=48*256*4,
     ):
     super(IVFPQTopkCuda, self).__init__()
@@ -20,25 +21,26 @@ class IVFPQTopkCuda(CustomKernel):
     assert k == 256
     assert m * 1024 <= sm_size
     assert m % n_cs == 0
+    assert stack_capacity >= 2
     self.m = m
     self.k = k
     self.tpb=tpb
     self.n_cs = n_cs
     self.sm_size = sm_size
+    self.stack_capacity = stack_capacity
     
-    # with open("ivfpq_topk.cu", "r") as f:
     with open(get_absolute_path("kernels","cuda","ivfpq_topk.cu"), "r") as f:
       self.code = f.read()
     varnames = ", ".join([f"d{i}" for i in range(n_cs)])
     code = (self.code
-      # .replace("_CODEBLOCK_", codeblock)
       .replace("_VARNAMES_", varnames)
       .replace("_M_", str(m))
       .replace("_K_", str(k))
       .replace("_TPB_", str(self.tpb))
       .replace("_NCS_", str(n_cs))
+      .replace("_STACKCAP_", str(stack_capacity))
     )
-    # print(kernel.split('\n')[60:64])
+    
     self._topk_fn = cp.RawKernel(
       code = code,
       name = 'ivfpq_topk',

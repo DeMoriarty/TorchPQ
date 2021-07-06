@@ -16,6 +16,7 @@ class IVFPQTopk:
       m=n_subvectors,
       tpb=1024,
       n_cs=contiguous_size,
+      stack_capacity = 2,
       sm_size=n_subvectors * 1024,
     )
 
@@ -23,6 +24,7 @@ class IVFPQTopk:
       m=n_subvectors,
       tpb=512,
       n_cs=contiguous_size,
+      stack_capacity = 2,
       sm_size=n_subvectors * 1024,
     )
 
@@ -30,6 +32,7 @@ class IVFPQTopk:
       m=n_subvectors,
       tpb=256,
       n_cs=contiguous_size,
+      stack_capacity = 4,
       sm_size=n_subvectors * 1024,
     )
 

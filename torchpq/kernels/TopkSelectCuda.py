@@ -76,7 +76,7 @@ class TopkSelectCuda(CustomKernel):
         x.data_ptr(),
         values.data_ptr(),
         indices.data_ptr(),
-        m, n, k
+        m, n, k_pow_of_2
       ],
       stream=self.stream
     )
