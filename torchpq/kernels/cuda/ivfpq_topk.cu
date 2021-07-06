@@ -1007,14 +1007,14 @@ __global__ void ivfpq_topk_residual(
         load_data(data, dataCache, iN, nData);
         consume_data(sMem, dataCache, value);
       } else {
-        value = -123456.f;
+        value = -INFINITY;
       }
-      value = cIsEmpty == 0 ? value : -987654.f;
+      value = cIsEmpty == 0 ? value : -INFINITY;
       index = cIsEmpty == 0 ? index : -1;
       
       sort(
         finalValue, finalIndex,
-        oldPair.value, oldPair.index,
+        value, index,
         sMem, nCandidates
       );
     }
@@ -1359,7 +1359,7 @@ __global__ void ivfpq_topk_residual_smart_probing(
 
   extern __shared__ _VOLATILE_ float sMem[]; // M * K
   const ll_t threadTotalSize = totalSize[qid];
-  float finalValue = -654321;
+  float finalValue = -INFINITY;
   float finalIndex = -1;
   int cCellStart = -1;
   for (int cCell = 0; cCell < nProbe; cCell++){
@@ -1385,14 +1385,14 @@ __global__ void ivfpq_topk_residual_smart_probing(
         load_data(data, dataCache, iN, nData);
         consume_data(sMem, dataCache, value);
       } else {
-        value = -123456.f;
+        value = -INFINITY;
       }
-      value = cIsEmpty == 0 ? value : -987654.f;
+      value = cIsEmpty == 0 ? value : -INFINITY;
       index = cIsEmpty == 0 ? index : -1;
       
       sort(
         finalValue, finalIndex,
-        oldPair.value, oldPair.index,
+        value, index,
         sMem, nCandidates
       );
     }
