@@ -919,7 +919,7 @@ __global__ void ivfpq_topk(
       sMem[0] = temp1;
       sMem[1] = temp2;
     }
-    // __syncthreads();
+    __syncthreads();
     
     iN += _TPB_;
   }
@@ -1150,6 +1150,7 @@ __global__ void ivfpq_topk_residual_precomputed(
         sMem[0] = temp1;
         sMem[1] = temp2;
       }
+      __syncthreads();
     }
   }
   sMem[0] = 0;
@@ -1296,6 +1297,7 @@ __global__ void ivfpq_topk_smart_probing(
       sMem[0] = temp1;
       sMem[1] = temp2;
     }
+    __syncthreads();
     iN += _TPB_;
   }
 
@@ -1530,6 +1532,7 @@ __global__ void ivfpq_topk_residual_precomputed_smart_probing(
         sMem[0] = temp1;
         sMem[1] = temp2;
       }
+      __syncthreads();
     }
   }
 
