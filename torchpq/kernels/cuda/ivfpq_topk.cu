@@ -1061,17 +1061,17 @@ __global__ void ivfpq_topk_residual_precomputed(
   int nCellSize = cellSize[qid * nProbe];
   int nCellEnd = nCellStart + nCellSize;
   int iCell = cells[qid * nProbe];
-  bool nCellRepeated = false;
-  bool cCellRepeated = false;
+  // bool nCellRepeated = false;
+  // bool cCellRepeated = false;
   load_part2_to_cache(part2, part2Cache, iCell);
 
   for (int cCell = 0; cCell < nProbe; cCell++){
     int cCellStart = nCellStart;
     int cCellSize = nCellSize;
     int cCellEnd = nCellEnd;
-    if (!cCellRepeated){
-      store_precomputed_to_smem(part1Cache, part2Cache, sMem);
-    }
+    // if (!cCellRepeated){
+    store_precomputed_to_smem(part1Cache, part2Cache, sMem);
+    // }
 
     if (cCell < nProbe - 1){
       int tCellStart = cellStart[qid * nProbe + cCell + 1];
@@ -1081,16 +1081,17 @@ __global__ void ivfpq_topk_residual_precomputed(
         nCellEnd = nCellStart + nCellSize;
         iCell = cells[qid * nProbe + cCell + 1];
         load_part2_to_cache(part2, part2Cache, iCell);
-        nCellRepeated = false;
-      } else {
-        nCellRepeated = true;
-      }
+        // nCellRepeated = false;
+      } 
+      // else {
+      //   nCellRepeated = true;
+      // }
     }
-    if (cCellRepeated){
-      cCellRepeated = nCellRepeated;
-      continue;
-    }
-    cCellRepeated = nCellRepeated;
+    // if (cCellRepeated){
+    //   cCellRepeated = nCellRepeated;
+    //   continue;
+    // }
+    // cCellRepeated = nCellRepeated;
     float cBaseSim = baseSims[qid * nProbe + cCell];
     int nIter = (cCellSize + _TPB_ - 1) / _TPB_;
     for (int iter = 0; iter < nIter; iter++ ){
