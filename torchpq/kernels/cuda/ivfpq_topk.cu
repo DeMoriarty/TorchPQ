@@ -913,7 +913,7 @@ __global__ void ivfpq_topk(
       }
       __syncthreads();
       minValue = sMem[1];
-      // __syncthreads();
+      __syncthreads();
     }
     if (tid == 0){
       sMem[0] = temp1;
@@ -1145,6 +1145,7 @@ __global__ void ivfpq_topk_residual_precomputed(
         }
         __syncthreads();
         minValue = sMem[1];
+        __syncthreads();
       }
       if (tid == 0){
         sMem[0] = temp1;
@@ -1291,7 +1292,7 @@ __global__ void ivfpq_topk_smart_probing(
       }
       __syncthreads();
       minValue = sMem[1];
-      // __syncthreads();
+      __syncthreads();
     }
     if (tid == 0){
       sMem[0] = temp1;
@@ -1527,6 +1528,7 @@ __global__ void ivfpq_topk_residual_precomputed_smart_probing(
         }
         __syncthreads();
         minValue = sMem[1];
+        __syncthreads();
       }
       if (tid == 0){
         sMem[0] = temp1;
