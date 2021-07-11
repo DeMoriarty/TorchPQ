@@ -1,10 +1,8 @@
-import torch
 from abc import ABC, abstractmethod
-from ..CustomModule import CustomModule
 
-class BaseIndex(CustomModule, ABC):
-  def __init__():
-    super(BaseIndex, self).__init__()
+class BaseIndex(ABC):
+  def __init__(self):
+    super().__init__()
   
   @abstractmethod
   def add(self):
