@@ -914,8 +914,8 @@ __global__ void ivfpq_topk(
       }
       __syncthreads();
       minValue = sMem[1];
-      __syncthreads();
     }
+    __syncthreads();
     if (tid == 0){
       sMem[0] = temp1;
       sMem[1] = temp2;
@@ -940,6 +940,7 @@ __global__ void ivfpq_topk(
     __syncthreads();
 
     if (sMem[0] > 0){      
+      __syncthreads();
       sort(
         finalValue, finalIndex,
         oldPair.value, oldPair.index,
@@ -1147,8 +1148,8 @@ __global__ void ivfpq_topk_residual_precomputed(
         }
         __syncthreads();
         minValue = sMem[1];
-        __syncthreads();
       }
+      __syncthreads();
       if (tid == 0){
         sMem[0] = temp1;
         sMem[1] = temp2;
@@ -1172,6 +1173,7 @@ __global__ void ivfpq_topk_residual_precomputed(
     __syncthreads();
 
     if (sMem[0] > 0){
+      __syncthreads();
       sort(
         finalValue, finalIndex,
         oldPair.value, oldPair.index,
@@ -1284,6 +1286,7 @@ __global__ void ivfpq_topk_smart_probing(
     __syncthreads();
 
     if (sMem[0] > 0){      
+      __syncthreads();
       sort(
         finalValue, finalIndex,
         oldPair.value, oldPair.index,
@@ -1295,8 +1298,8 @@ __global__ void ivfpq_topk_smart_probing(
       }
       __syncthreads();
       minValue = sMem[1];
-      __syncthreads();
     }
+    __syncthreads();
     if (tid == 0){
       sMem[0] = temp1;
       sMem[1] = temp2;
@@ -1321,6 +1324,7 @@ __global__ void ivfpq_topk_smart_probing(
     __syncthreads();
 
     if (sMem[0] > 0){      
+      __syncthreads();
       sort(
         finalValue, finalIndex,
         oldPair.value, oldPair.index,
@@ -1520,6 +1524,7 @@ __global__ void ivfpq_topk_residual_precomputed_smart_probing(
       }
       __syncthreads();
       if (sMem[0] > 0){
+        __syncthreads();
         sort(
           finalValue, finalIndex,
           oldPair.value, oldPair.index,
@@ -1531,8 +1536,8 @@ __global__ void ivfpq_topk_residual_precomputed_smart_probing(
         }
         __syncthreads();
         minValue = sMem[1];
-        __syncthreads();
       }
+      __syncthreads();
       if (tid == 0){
         sMem[0] = temp1;
         sMem[1] = temp2;
@@ -1556,6 +1561,7 @@ __global__ void ivfpq_topk_residual_precomputed_smart_probing(
     __syncthreads();
 
     if (sMem[0] > 0){
+      __syncthreads();
       sort(
         finalValue, finalIndex,
         oldPair.value, oldPair.index,
