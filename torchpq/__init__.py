@@ -11,7 +11,7 @@ from . import kernels
 from . import experimental
 from . import metric
 from . import util
-from . import old
+from . import legacy
 from . import index
 from . import fn
 
