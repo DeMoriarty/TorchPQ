@@ -22,32 +22,31 @@ pip install torchpq
 
 #### Training
 ```python
-from torchpq import IVFPQ
+from torchpq.index import IVFPQIndex
 import torch
 
 n_data = 1000000 # number of data points
 d_vector = 128 # dimentionality / number of features
 
-index = IVFPQ(
+index = IVFPQIndex(
   d_vector=d_vector,
   n_subvectors=64,
-  n_cq_clusters=1024,
-  n_pq_clusters=256,
+  n_cells=1024,
   blocksize=128,
+  init_size=2048,
   distance="euclidean",
 )
 
-x = torch.randn(d_vector, n_data, device="cuda:0")
-index.train(x)
+trainset = torch.randn(d_vector, n_data, device="cuda:0")
+index.train(trainset)
 ```
 There are some important parameters that need to be explained:
 - **d_vector**: dimentionality of input vectors. there are 2 constraints on `d_vector`: (1) it needs to be divisible by `n_subvectors`; (2) it needs to be a multiple of 4.*
 - **n_subvectors**: number of subquantizers, essentially this is the byte size of each quantized vector, 64 byte per vector in the above example.**
-- **n_cq_clusters**: number of coarse quantizer clusters
-- **n_pq_clusters**: number of product quantizer clusters, this is assumed to be 256 throughout the entire project, and should **NOT** be changed.
-- **blocksize**: initial capacity assigned to each voronoi cell of coarse quantizer.
-`n_cq_clusters * blocksize` is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell will be automatically expanded.
-If you need to add vectors frequently, a larger value for `blocksize` is recommended.
+- **n_cells**: number of coarse quantizer clusters
+- **init_size**: initial capacity assigned to each voronoi cell of coarse quantizer.
+`n_cells * init_size` is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell will be automatically expanded.
+If you need to add vectors frequently, a larger value for `init_size` is recommended.
 
 Remember that the shape of any tensor that contains data points has to be ```[d_vector, n_data]```.
 
@@ -55,25 +54,26 @@ Remember that the shape of any tensor that contains data points has to be ```[d_
 \*\* actual byte size would be (n_subvectors+9) bytes, 8 bytes for ID and 1 byte for is_empty
 #### Adding new vectors
 ```python
+baseset = torch.randn(d_vector, n_data, device="cuda:0")
 ids = torch.arange(n_data, device="cuda")
-index.add(x, input_ids=ids)
+index.add(baseset, ids=ids)
 ```
 Each ID in `ids` needs to be a unique int64 (`torch.long`) value that identifies a vector in `x`.
-if `input_ids` is not provided, it will be set to `torch.arange(n_data, device="cuda") + previous_max_id`
+if `ids` is not provided, it will be set to `torch.arange(n_data, device="cuda") + previous_max_id`
 
 #### Removing vectors
 ```python
-index.remove(ids)
+index.remove(ids=ids)
 ```
-`index.remove(ids)` will virtually remove vectors with specified `ids` from storage.
+`index.remove(ids=ids)` will virtually remove vectors with specified `ids` from storage.
 It ignores ids that doesn't exist.
 
 #### Topk search
 ```python
 index.n_probe = 32
 n_query = 10000
-query = torch.randn(d_vector, n_query, device="cuda:0")
-topk_values, topk_ids = index.topk(query, k=100)
+queryset = torch.randn(d_vector, n_query, device="cuda:0")
+topk_values, topk_ids = index.topk(queryset, k=100)
 ```
 - when `distance="inner"`, `topk_values` are **inner product** of queries and topk closest data points.
 - when `distance="euclidean"`, `topk_values` are **negative squared L2 distance** between queries and topk closest data points.
@@ -83,7 +83,7 @@ topk_values, topk_ids = index.topk(query, k=100)
 #### Encode and Decode
 you can use IVFPQ as a vector codec for lossy compression of vectors
 ```python
-code = index.encode(query)   # compression
+code = index.encode(queryset)   # compression
 reconstruction = index.decode(code) # reconstruction
 ```
 
@@ -98,7 +98,7 @@ index.load_state_dict(torch.load(PATH))
 ### Clustering
 #### K-means
 ```python
-from torchpq.kmeans import KMeans
+from torchpq.clustering import KMeans
 import torch
 
 n_data = 1000000 # number of data points
@@ -130,79 +130,9 @@ labels = kmeans.fit(x)
 labels = kmeans.predict(x)
 ```
 
-## Benchmark
-All experiments were performed with a Tesla T4 GPU.
-
-### SIFT1M
-#### IVFPQ
-
-[Faiss](https://github.com/facebookresearch/faiss) is one of the most well known ANN search libraries, and it also has a GPU implementation of IVFPQ, so we did some comparison experiments with faiss.  
-<details>
-  <summary>Click to show details</summary>
-  
-<p float="left">
-  <img src="/imgs/6.png" width="100%"/>
-</p>  
-
-**How to read the plot:**  
-- the plot format follows the style of [ann-benchmarks](http://ann-benchmarks.com/)
-- X axis is recall@1, Y axis is queries/second
-- the closer to the top right corner the better
-- indexes with same parameters from different libraries have similar colors.
-- different libraries have different line styles (TorchPQ is solid line with circle marker, faiss is dashed line with triangle marker)
-- each node on the line represents a different n_probe, starting from 1 at the left most node, and multiplied by 2 at the next node. (n_probe = 1,2,4,8,16,...)  
-  
-**Summary:**  
-- for all the IVF16384 variants, torchpq outperforms faiss when n_probe > 16.
-- for IVF4096, torchpq has lower recall@1 compared to faiss, this could be caused by not encoding residuals. An option to encode residuals will be added soon.  
-</details>  
-
-#### IVFPQ+R
-<details>
-  <summary>Click to show details</summary>
-  
-<p float="left">
-  <img src="/imgs/tiny/1.png" width="49%"/>
-  <img src="/imgs/tiny/2.png" width="49%"/>
-</p>  
-</details>  
-
-### GIST1M
-coming soon...
-
-### K-Means
-Performing K-Means clustering on float32 data randomly sampled from normal distribution.  
-<details>  
-  <summary>Click to show details</summary>  
-  
-- Number of iterations is set to 15.   
-- Tolerance is set to 0 in order to perform full 15 iterations of K-Means   
-- Initial centroids are randomly chosen from training data   
-- All runs are performed on a Tesla T4 GPU   
-
-**Contestants**:
-- TorchPQ.kmeans.KMeans
-- faiss.Clustering
-- [KeOps](https://www.kernel-operations.io/keops/_auto_tutorials/kmeans/plot_kmeans_torch.html)  
-
-#### n_features=256, n_clusters=256, varying n_data
-<p float="left">
-  <img src="/imgs/n_clusters=256 n_features=256.png" width="100%"/>
-</p>  
-
-#### n_features=256, n_clusters=16384, varying n_data
-<p float="left">
-  <img src="/imgs/n_clusters=16384 n_features=256.png" width="100%"/>
-</p>  
-
-#### n_features=128, n_data=1,000,000, varying n_clusters
-<p float="left">
-  <img src="/imgs/n_data=1000000 n_features=128.png" width="100%"/>
-</p>  
-
-#### n_clusters=1024, n_data=1,000,000, varying n_features
-<p float="left">
-  <img src="/imgs/n_data=1000000 n_clusters=1024.png" width="100%"/>
-</p>  
-note: faiss and keOps went OOM when n_features > 512
-</details>  
+## Benchmarks
+- [K-Means](/benchmark/turing/kmeans/README.md)
+- [Sift1M](/benchmark/turing/sift1m/README.md)
+- Sift10M (coming soon)
+- Sift100M (coming soon)
+- Gist1M (coming soon)

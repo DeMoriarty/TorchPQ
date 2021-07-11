@@ -1,0 +1,10 @@
+code_size: 32
+contiguous_size: 1
+device: cuda:0
+dtype: float32
+initial_size: 128
+expand_step_size: 1024
+expand_mode: double
+use_inverse_id_mapping: true
+n_cells: 8
+verbose: 2

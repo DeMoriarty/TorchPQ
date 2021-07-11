@@ -5,6 +5,12 @@ class CustomModule(nn.Module):
   def __init__(self):
     super(CustomModule, self).__init__()
 
+  def print_message(self, text, min_verbosity=0):
+    if hasattr(self, "verbose"):
+      if self.verbose < min_verbosity:
+        return
+    print(f"{type(self).__name__}: {text}")
+
   def load_state_dict(self, state_dict):
     for k, v in state_dict.items():
       if "." not in k:
@@ -15,9 +21,3 @@ class CustomModule(nn.Module):
     for name, module in self.named_children():
       sd = {k.replace(name+".", "") : v for k, v in state_dict.items() if k.startswith(name+".")}
       module.load_state_dict(sd)
-      # else:
-      #   module = k.split('.')[0]
-      #   assert hasattr(self, module), f"module {module} does not exist"
-      #   module = getattr(self, module)
-      #   k = ".".join(k.split('.')[1:])
-      #   module.load_state_dict( {k: v} )
