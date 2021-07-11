@@ -1154,6 +1154,7 @@ __global__ void ivfpq_topk_residual_precomputed(
       __syncthreads();
     }
   }
+  __syncthreads();
   sMem[0] = 0;
   __syncthreads();
   for (int i=0; i < _STACKCAP_; i++){
