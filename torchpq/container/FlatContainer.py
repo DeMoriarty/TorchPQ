@@ -104,7 +104,7 @@ class FlatContainer(BaseContainer):
     new_storage = torch.zeros(
       self.code_size // self.contiguous_size,
       n_new,
-      contiguous_size,
+      self.contiguous_size,
       device=self.device,
       dtype=self.dtype
     )
