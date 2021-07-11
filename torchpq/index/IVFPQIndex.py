@@ -53,7 +53,7 @@ class IVFPQIndex(CellContainer):
     else:
       self._use_precomputed = False
     self._precomputed_part2 = None
-    self._use_cublas = False
+    self._use_cublas = True
     self._use_smart_probing = True
     self._smart_probing_temperature = 30.0
 
