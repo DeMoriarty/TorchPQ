@@ -78,3 +78,35 @@
 <img src="imgs/ivf[16384]_pq[64]_recall@10.png">  
 
 </details>
+
+#### k = 100
+<details markdown="1">
+  <summary>
+    <b>Click here to see details:</b>  
+  </summary>  
+
+##### IVF4096 PQ8
+<img src="imgs/ivf[4096]_pq[8]_recall@100.png">  
+
+##### IVF4096 PQ16
+<img src="imgs/ivf[4096]_pq[16]_recall@100.png">  
+
+##### IVF4096 PQ32
+<img src="imgs/ivf[4096]_pq[32]_recall@100.png">  
+
+##### IVF4096 PQ64
+<img src="imgs/ivf[4096]_pq[64]_recall@100.png">  
+
+##### IVF16384 PQ8
+<img src="imgs/ivf[16384]_pq[8]_recall@100.png">  
+
+##### IVF16384 PQ16
+<img src="imgs/ivf[16384]_pq[16]_recall@100.png">  
+
+##### IVF16384 PQ32
+<img src="imgs/ivf[16384]_pq[32]_recall@100.png">  
+
+##### IVF16384 PQ64
+<img src="imgs/ivf[16384]_pq[64]_recall@100.png">  
+
+</details>
