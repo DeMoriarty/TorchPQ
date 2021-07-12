@@ -133,6 +133,6 @@ labels = kmeans.predict(x)
 ## Benchmarks
 - [K-Means](/benchmark/turing/kmeans/README.md)
 - [Sift1M](/benchmark/turing/sift1m/README.md)
+- [Gist1M](/benchmark/turing/gist1m/README.md)
 - Sift10M (coming soon)
 - Sift100M (coming soon)
-- Gist1M (coming soon)
