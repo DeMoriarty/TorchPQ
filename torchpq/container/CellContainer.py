@@ -6,6 +6,7 @@ from ..kernels import GetIOACuda
 from ..kernels import GetWriteAddressV2Cuda
 from .BaseContainer import BaseContainer
 
+
 class CellContainer(BaseContainer):
   def __init__(
       self,
@@ -244,66 +245,6 @@ class CellContainer(BaseContainer):
     self._is_empty.fill_(1)
     self._n_items = 0
     self.print_message("index has been empties", 2)
-
-  def __expand_v2(self):
-    storage = self._storage
-    address2id = self._address2id
-    is_empty = self._is_empty
-    del self._storage, self._address2id, self._is_empty
-    selected_cell_size = self._cell_size[cells]
-    if self.expand_mode == "step":
-      n_new = cells.shape[0] * self.expand_step_size
-    elif self.expand_mode == "double":
-      n_new = selected_cell_size.sum().item()
-
-    new_storage = torch.zeros(
-      self.code_size // self.contiguous_size,
-      storage.shape[1] + n_new,
-      self.contiguous_size,
-      device = self.device,
-      dtype = self.dtype
-    )
-    new_a2i = torch.zeros(
-      storage.shape[1] + n_new,
-      device = self.device,
-      dtype = torch.long
-    ) - 1
-    new_is_empty = torch.ones(
-      storage.shape[1] + n_new,
-      device = self.device,
-      dtype = torch.uint8
-    )
-
-    map_to_new = torch.arange(
-      storage.shape[1],
-      device=self.device,
-      dtype=torch.long
-    )
-    
-    old_cell_start = self._cell_start.clone()
-    old_cell_capacity = self._cell_capacity.clone()
-    for cell_index in cells:
-      if self.expand_mode == "step":
-        cell_n_new = self.expand_step_size
-      elif self.expand_mode == "double":
-        cell_n_new = cell_cap
-      cell_start = old_cell_start[cell_index].item()
-      cell_cap = old_call_capacity[cell_index].item()
-      cell_end = cell_start + cell_cap
-      new_cell_start = self._cell_start[cell_index].item()
-      new_cell_cap = self._cell_capacity[cell_index].item()
-
-      map_to_new[cell_start : cell_end] += - cell_start + new_cell_start
-
-      self._call_capacity[cell_index] += cell_n_new
-      arange = torch.arange(
-        start = cell_index+1,
-        end=self.n_cells
-      )
-      self._cell_start[arange] += cell_n_new
-    new_storage[:, map_to_new] = storage
-    new_a2i[map_to_new] = address2id
-    new_is_empty[map_to_new] = is_empty
 
   def expand(self, cells):
     n_cells = cells.shape[0]
