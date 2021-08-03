@@ -441,10 +441,10 @@ class MinibatchKMeans(CustomModule):
     self.centroids[:] = centroids
 
     unique_labels, counts = labels.unique(return_counts=True)
-    self.n_points_in_clusters[labels] += counts
+    self.n_points_in_clusters[unique_labels] += counts
 
     self._inertia = self.calculate_inertia(maxsims).item()
-    self._error = self.calculate_error(centroids, new_centroids).item()
+    self._error = self.calculate_error(centroids, self.centroids).item()
     self.print_message(f"----iteration {self._iteration}, error={self._error}, inertia={self._inertia}", 1)
     self._iteration += 1
     return labels
