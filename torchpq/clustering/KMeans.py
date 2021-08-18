@@ -275,11 +275,11 @@ class KMeans(CustomModule):
         replace=False
       )
       centroids = data[:, random_index].clone()
-      self.print_message("centroids are randomly initialized", 1)
+      self.print_message("centroids are randomly initialized", 2)
 
     elif self.init_mode == "kmeans++":
       centroids = self.kmeanspp(data).clone()
-      self.print_message("kmeans++ initialization is done!", 1)
+      self.print_message("kmeans++ initialization is done!", 2)
     return centroids
 
   def get_labels(self, data, centroids):
@@ -430,6 +430,7 @@ class KMeans(CustomModule):
         best_error = error
         best_labels = labels
         best_inertia = inertia
+      centroids = None
       self.print_message(f"--{i}th redo finished, error: {error.item()}, inertia: {inertia.item()}time spent:{round(time()-tm_i, 4)} sec", 2)
 
     self.register_buffer("centroids", best_centroids)
