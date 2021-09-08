@@ -102,8 +102,14 @@ class IVFPQIndex(CellContainer):
   def use_tensor_core(self, value):
     assert type(value) is bool
     assert self.use_cublas
-    assert util.get_tensor_core_availability(torch.device(self.device).index)
-    self._use_tensor_core = value
+    # assert util.get_tensor_core_availability(torch.device(self.device).index)
+
+    if util.get_tensor_core_availability(torch.device(self.device).index):
+      self._use_tensor_core = value
+    else:
+      self._use_tensor_core = False
+      if value:
+        self.print_message("warning: Tensor core not available", 1)
 
   @property
   def fp16_scale_mode(self):
