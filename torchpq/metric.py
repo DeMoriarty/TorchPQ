@@ -1,5 +1,5 @@
 import torch
-import util
+from . import util
 
 def cosine_similarity(a, b, normalize=True, inplace=False):
   """

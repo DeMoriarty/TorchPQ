@@ -26,7 +26,7 @@ class GetWriteAddressCuda(CustomKernel):
     self.fn = cp.RawKernel(
       kernel,
       'get_write_address',
-      backend='nvcc',
+      backend='nvrtc',
       # options=('--maxrregcount=255',),
     )
 

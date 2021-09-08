@@ -42,13 +42,13 @@ class MinBMMCuda(CustomKernel):
     self._fn_tt = cp.RawKernel(
       code=self.kernel,
       name="min_bmm_tt",
-      backend='nvcc',
+      backend='nvrtc',
       options=('--maxrregcount=128', '--use_fast_math')
     )
     self._fn_nn = cp.RawKernel(
       code=self.kernel,
       name="min_bmm_nn",
-      backend='nvcc',
+      backend='nvrtc',
       options=(
         '--maxrregcount=128',
         '--use_fast_math',
@@ -60,13 +60,13 @@ class MinBMMCuda(CustomKernel):
     self._fn_tn = cp.RawKernel(
       code=self.kernel,
       name="min_bmm_tn",
-      backend='nvcc',
+      backend='nvrtc',
       options=('--maxrregcount=128', '--use_fast_math')
     )
     self._fn_nt = cp.RawKernel(
       code=self.kernel,
       name="min_bmm_nt",
-      backend='nvcc',
+      backend='nvrtc',
       options=('--maxrregcount=128', '--use_fast_math')
     )
 

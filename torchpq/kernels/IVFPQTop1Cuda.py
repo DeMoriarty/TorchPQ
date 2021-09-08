@@ -45,7 +45,7 @@ class IVFPQTop1Cuda(CustomKernel):
         '--maxrregcount=255',
         '--use_fast_math'
       ),
-      # backend='nvcc',
+      backend='nvrtc',
     )
     self._top1_fn.max_dynamic_shared_size_bytes = sm_size
 
@@ -56,7 +56,7 @@ class IVFPQTop1Cuda(CustomKernel):
         '--maxrregcount=255',
         '--use_fast_math'
       ),
-      # backend='nvcc',
+      backend='nvrtc',
     )
     self._top1_residual_fn.max_dynamic_shared_size_bytes = sm_size
     
@@ -67,7 +67,7 @@ class IVFPQTop1Cuda(CustomKernel):
         '--maxrregcount=255',
         '--use_fast_math'
       ),
-      # backend='nvcc',
+      backend='nvrtc',
     )
     self._top1_residual_precomputed_fn.max_dynamic_shared_size_bytes = sm_size
 
@@ -78,7 +78,7 @@ class IVFPQTop1Cuda(CustomKernel):
         '--maxrregcount=255',
         '--use_fast_math'
       ),
-      # backend='nvcc',
+      backend='nvrtc',
     )
     self._top1_smart_probing_fn.max_dynamic_shared_size_bytes = sm_size
 
@@ -89,7 +89,7 @@ class IVFPQTop1Cuda(CustomKernel):
         '--maxrregcount=255',
         '--use_fast_math'
       ),
-      # backend='nvcc',
+      backend='nvrtc',
     )
     self._top1_residual_smart_probing_fn.max_dynamic_shared_size_bytes = sm_size
     
@@ -100,7 +100,7 @@ class IVFPQTop1Cuda(CustomKernel):
         '--maxrregcount=255',
         '--use_fast_math'
       ),
-      # backend='nvcc',
+      backend='nvrtc',
     )
     self._top1_residual_precomputed_smart_probing_fn.max_dynamic_shared_size_bytes = sm_size
     

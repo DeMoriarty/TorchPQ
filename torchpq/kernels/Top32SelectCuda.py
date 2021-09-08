@@ -38,7 +38,7 @@ class Top32SelectCuda(CustomKernel):
     self._fn_fp32 = cp.RawKernel(
       code=self.kernel,
       name=self.kernel_name,
-      backend='nvcc',
+      backend='nvrtc',
       options=(
         '--use_fast_math',
         '-lineinfo'
@@ -50,7 +50,7 @@ class Top32SelectCuda(CustomKernel):
     self._fn_fp16 = cp.RawKernel(
       code=self.kernel,
       name=self.kernel_name_fp16,
-      backend='nvcc',
+      backend='nvrtc',
       options=(
         '--use_fast_math',
         '-lineinfo'

@@ -41,7 +41,7 @@ class Top1SelectCuda(CustomKernel):
     self._fn_fp32 = cp.RawKernel(
       code=self.kernel,
       name=self.kernel_name,
-      backend='nvcc',
+      backend='nvrtc',
       options=(
         '--use_fast_math',
         '-lineinfo'
@@ -53,7 +53,7 @@ class Top1SelectCuda(CustomKernel):
     self._fn_fp16 = cp.RawKernel(
       code=self.kernel,
       name=self.kernel_name_fp16,
-      backend='nvcc',
+      backend='nvrtc',
       options=(
         '--use_fast_math',
         '-lineinfo'
@@ -62,7 +62,7 @@ class Top1SelectCuda(CustomKernel):
         #'-dlcm=cg',
       )
     )
-    print(self._fn_fp32.attributes)
+    # print(self._fn_fp32.attributes)
 
   @staticmethod
   def next_power_of_2(x):

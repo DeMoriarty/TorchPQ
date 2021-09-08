@@ -37,7 +37,7 @@ class TopkSelectCuda_v2(CustomKernel):
     self._fn = cp.RawKernel(
       code=self.kernel,
       name=self.kernel_name,
-      backend='nvcc',
+      backend='nvrtc',
       options=(
         '--use_fast_math',
         '-lineinfo'

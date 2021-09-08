@@ -1,3 +1,8 @@
+#ifndef INFINITY
+#define INFINITY __int_as_float(0x7f800000)
+#endif
+
+
 typedef unsigned char uint8_t;
 
 struct __device_builtin__ __align__(_NCS_) uint8n
