@@ -53,6 +53,13 @@ def get_compute_capability(device_id=0):
     result = (-1, 0)
   return result
 
+def get_tensor_core_availability(device_id=0):
+  cc = get_compute_capability(device_id)
+  device_name = torch.cuda.get_device_name()
+  if cc[0] > 7 and "GTX" not in device_name:
+    return True
+  return False
+
 def get_maximum_shared_memory_bytes(device_id=0):
   cc = get_compute_capability(device_id)
   if cc[0] < 7 or cc == (7, 2):

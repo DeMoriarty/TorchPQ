@@ -56,6 +56,8 @@ class IVFPQIndex(CellContainer):
     self._use_cublas = True
     self._use_smart_probing = True
     self._smart_probing_temperature = 30.0
+    self._use_tensor_core = False
+    self._fp16_scale_mode = "a"
 
     self.vq_codec = VQCodec(
       n_clusters = n_cells,
@@ -91,6 +93,26 @@ class IVFPQIndex(CellContainer):
   def use_cublas(self, value):
     assert type(value) is bool
     self._use_cublas = value
+
+  @property
+  def use_tensor_core(self):
+    return self._use_tensor_core
+
+  @use_tensor_core.setter
+  def use_tensor_core(self, value):
+    assert type(value) is bool
+    assert self.use_cublas
+    assert util.get_tensor_core_availability(torch.device(self.device).index)
+    self._use_tensor_core = value
+
+  @property
+  def fp16_scale_mode(self):
+    return self._fp16_scale_mode
+
+  @fp16_scale_mode.setter
+  def fp16_scale_mode(self, value):
+    assert value in ["a", "b", "both", "none"]
+    self._fp16_scale_mode = value
 
   @property
   def use_smart_probing(self):
@@ -451,8 +473,13 @@ class IVFPQIndex(CellContainer):
     # find n_probe closest cells
     if self.use_cublas:
       # sims = metric.negative_squared_l2_distance(x.half(), vq_codebook.half())
-      sims = metric.negative_squared_l2_distance(x, vq_codebook, use_tensor_core=False)
-      sims = sims.float().contiguous()
+      sims = metric.negative_squared_l2_distance(
+        a = x, 
+        b = vq_codebook, 
+        use_tensor_core = self.use_tensor_core, 
+        scale_mode = self.fp16_scale_mode
+      )
+      sims = sims.contiguous()
       topk_sims, cells = self._topk(sims, k=self.n_probe, dim=1)
     else:
       topk_sims, cells = self.vq_codec.kmeans.topk(x, k=self.n_probe)

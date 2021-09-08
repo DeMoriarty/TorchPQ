@@ -6,7 +6,7 @@ import math
 from .CustomKernel import CustomKernel
 from ..util import get_absolute_path
 
-class TopkSelectCuda(CustomKernel):
+class TopkSelectCuda_v2(CustomKernel):
   """
     tpb: threads per block, needs to be a power of 2 between 32 and 1024
     queue_capacity: capacity of thread queue
@@ -21,8 +21,10 @@ class TopkSelectCuda(CustomKernel):
     self.tpb = tpb
     self.queue_capacity = queue_capacity
     self.buffer_size = buffer_size
+    self.n_warp = tpb // 32 #warps per block
+    self.kernel_name = "topk_select_v2"
 
-    with open(get_absolute_path("kernels", "cuda", "topk_select.cu"),'r') as f: ###
+    with open(get_absolute_path("kernels", "cuda", f"{self.kernel_name}.cu"),'r') as f: ###
       self.kernel = f.read()
     
     self.kernel = (
@@ -34,10 +36,11 @@ class TopkSelectCuda(CustomKernel):
 
     self._fn = cp.RawKernel(
       code=self.kernel,
-      name="topk_select",
+      name=self.kernel_name,
       backend='nvcc',
       options=(
         '--use_fast_math',
+        '-lineinfo'
         # '--maxrregcount=128',
         #'-Xptxas',
         #'-dlcm=cg',
@@ -51,20 +54,21 @@ class TopkSelectCuda(CustomKernel):
   def __call__(self, x, k=128, dim=1):
     """
       x: shape = [m, n], dtype: float32
-      k: 1 to 1024
+      k: 1 to 32
       dim: 1
     """
     assert len(x.shape) == 2
     assert x.dtype in [torch.float32]
     assert x.device.type == "cuda"
-    assert 1 <= k <= self.tpb
+    # assert 1 <= k <= self.tpb
+    assert k <= 32
     assert dim == 1
     assert x.is_contiguous()
     k_pow_of_2 = self.next_power_of_2(k)
 
     m, n = x.shape
     threads_per_block = (self.tpb, )
-    blocks_per_grid = (m, )
+    blocks_per_grid = (math.ceil(m / self.n_warp), )
     values = torch.empty(m, k_pow_of_2, device="cuda:0", dtype=x.dtype)
     values.fill_(float("-inf"))
     indices = torch.empty(m, k_pow_of_2, device="cuda:0", dtype=torch.long)

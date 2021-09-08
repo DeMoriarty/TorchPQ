@@ -19,3 +19,5 @@ from .TopkBMMCuda import TopkBMMCuda
 from .IVFPQTopkCuda import IVFPQTopkCuda
 from .IVFPQTop1Cuda import IVFPQTop1Cuda
 from .TopkSelectCuda import TopkSelectCuda
+from .Top32SelectCuda import Top32SelectCuda
+from .Top1SelectCuda import Top1SelectCuda
