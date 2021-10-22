@@ -1,7 +1,7 @@
 import torch
 import numpy as np
-from .BaseIndex import BaseIndex
-from ..container import CellContainer
+import math
+from ..container import DistributedCellContainer
 from ..codec import PQCodec, VQCodec
 from ..fn import IVFPQTopk
 from ..fn import Topk
@@ -10,7 +10,7 @@ from .. import metric
 
 from time import time
 
-class IVFPQIndex(CellContainer):
+class DistributedIVFPQIndex(DistributedCellContainer):
   def __init__(
       self,
       d_vector,
@@ -28,7 +28,8 @@ class IVFPQIndex(CellContainer):
       assert torch.cuda.is_available(), "cuda is not available"
       max_sm_bytes = util.get_maximum_shared_memory_bytes()
       assert n_subvectors <= max_sm_bytes // 1024
-    assert d_vector % n_subvectors == 0
+    assert d_vector % n_subvectors == 0 ## this can be removed
+    assert n_subvectors % 4 == 0 ## this can also be removed
 
     super().__init__(
       code_size = n_subvectors,
@@ -45,7 +46,7 @@ class IVFPQIndex(CellContainer):
 
     self.d_vector = d_vector
     self.n_subvectors = n_subvectors
-    self.d_subvector = d_vector // n_subvectors
+    self.d_subvector = d_vector // n_subvectors ## TODO:
     self.distance = distance
     self.verbose = verbose
     self.pq_use_residual = pq_use_residual
@@ -475,8 +476,6 @@ class IVFPQIndex(CellContainer):
     if self.distance == "cosine":
       x = util.normalize(x, dim=0)
     n_query = x.shape[1]
-    storage = self._storage
-    is_empty = self._is_empty
     vq_codebook = self.vq_codec.codebook
 
     util.tick("checks")
@@ -484,7 +483,7 @@ class IVFPQIndex(CellContainer):
     if self.use_cublas:
       # sims = metric.negative_squared_l2_distance(x.half(), vq_codebook.half())
       sims = metric.negative_squared_l2_distance(
-        a = x,
+        a = x, 
         b = vq_codebook, 
         use_tensor_core = self.use_tensor_core, 
         scale_mode = self.fp16_scale_mode
@@ -500,15 +499,10 @@ class IVFPQIndex(CellContainer):
     if self.use_smart_probing and self.n_probe > 1:
       p = -topk_sims.abs().sqrt()
       p = torch.softmax(p / self.smart_probing_temperature, dim=-1)
-
-      # p_norm = p.norm(dim=-1)
-      # sqrt_d = self.n_probe ** 0.5
-      # score = 1 - (p_norm * sqrt_d - 1) / (sqrt_d - 1) - 1e-6
-      # n_probe_list = torch.ceil(score * (self.n_probe) ).long()
       
       max_n_probe = torch.tensor(self.n_probe, device=self.device)
       normalized_entropy = - torch.sum(p * torch.log2(p) / torch.log2(max_n_probe), dim=-1)
-      n_probe_list = torch.ceil(normalized_entropy * max_n_probe ).long()
+      n_probe_list = torch.ceil(normalized_entropy * max_n_probe).long()
     else:
       n_probe_list = torch.zeros(n_query, dtype=torch.long, device=self.device) + self.n_probe
     util.tick("smart probing")

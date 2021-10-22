@@ -1,7 +1,7 @@
-from ..kernels import IVFPQTopkCuda
-from ..kernels import IVFPQTop1Cuda
+from ..kernels import DistributedIVFPQTopkCuda
+from ..kernels import DistributedIVFPQTop1Cuda
 
-class IVFPQTopk:
+class DistributedIVFPQTopk:
   def __init__(
       self,
       n_subvectors,
@@ -12,7 +12,7 @@ class IVFPQTopk:
     self.contiguous_size = contiguous_size
     self.sm_size = sm_size
 
-    self._top1024_cuda = IVFPQTopkCuda(
+    self._top1024_cuda = DistributedIVFPQTopkCuda(
       m=n_subvectors,
       tpb=1024,
       n_cs=contiguous_size,
@@ -20,7 +20,7 @@ class IVFPQTopk:
       sm_size=n_subvectors * 1024,
     )
 
-    self._top512_cuda = IVFPQTopkCuda(
+    self._top512_cuda = DistributedIVFPQTopkCuda(
       m=n_subvectors,
       tpb=512,
       n_cs=contiguous_size,
@@ -28,7 +28,7 @@ class IVFPQTopk:
       sm_size=n_subvectors * 1024,
     )
 
-    self._top256_cuda = IVFPQTopkCuda(
+    self._top256_cuda = DistributedIVFPQTopkCuda(
       m=n_subvectors,
       tpb=256,
       n_cs=contiguous_size,
@@ -37,14 +37,14 @@ class IVFPQTopk:
     )
 
     if n_subvectors <= 32:
-      self._top1_cuda = IVFPQTop1Cuda(
+      self._top1_cuda = DistributedIVFPQTop1Cuda(
         m=n_subvectors,
         tpb=512,
         n_cs=contiguous_size,
         sm_size=n_subvectors * 1024,
       )
     else:
-      self._top1_cuda = IVFPQTop1Cuda(
+      self._top1_cuda = DistributedIVFPQTop1Cuda(
         m=n_subvectors,
         tpb=256,
         n_cs=contiguous_size,
@@ -53,176 +53,176 @@ class IVFPQTopk:
 
   def topk(
       self,
-      data,
+      address2id_ptr,
       precomputed,
-      cell_start,
+      cell_ptr,
       cell_size,
-      is_empty,
+      cell_capacity,
       n_probe_list,
       k=256
     ):
     assert 0 < k <= 1024
     if k == 1:
       return self._top1_cuda.topk(
-        data=data,
+        address2id_ptr=address2id_ptr,
         precomputed=precomputed,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
     elif 1 < k <= 256:
       return self._top256_cuda.topk(
-        data=data,
+        address2id_ptr=address2id_ptr,
         precomputed=precomputed,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
     elif 256 < k <= 512:
       return self._top512_cuda.topk(
-        data=data,
+        address2id_ptr=address2id_ptr,
         precomputed=precomputed,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
     elif 512 < k <= 1024:
       return self._top1024_cuda.topk(
-        data=data,
+        address2id_ptr=address2id_ptr,
         precomputed=precomputed,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
   
   def topk_residual(
       self,
-      data,
+      address2id_ptr,
       precomputed,
-      cell_start,
+      cell_ptr,
       cell_size,
+      cell_capacity,
       base_sims,
-      is_empty,
       n_probe_list,
       k=256
     ):
     assert 0 < k <= 1024
     if k == 1:
       return self._top1_cuda.topk_residual(
-        data=data,
+        address2id_ptr=address2id_ptr,
         precomputed=precomputed,
         base_sims=base_sims,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
     elif 1 < k <= 256:
       return self._top256_cuda.topk_residual(
-        data=data,
+        address2id_ptr=address2id_ptr,
         precomputed=precomputed,
         base_sims=base_sims,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
     elif 256 < k <= 512:
       return self._top512_cuda.topk_residual(
-        data=data,
+        address2id_ptr=address2id_ptr,
         precomputed=precomputed,
         base_sims=base_sims,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
     elif 512 < k <= 1024:
       return self._top1024_cuda.topk_residual(
-        data=data,
+        address2id_ptr=address2id_ptr,
         precomputed=precomputed,
         base_sims=base_sims,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
 
   def topk_residual_precomputed(
       self,
-      data,
+      address2id_ptr,
       part1,
       part2,
-      cell_start,
+      cell_ptr,
       cell_size,
+      cell_capacity,
       cells,
       base_sims,
-      is_empty,
       n_probe_list=None,
       k=256
     ):
     assert 0 < k <= 1024
     if k == 1:
       return self._top1_cuda.topk_residual_precomputed(
-        data=data,
+        address2id_ptr=address2id_ptr,
         part1=part1,
         part2=part2,
         cells=cells,
         base_sims=base_sims,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
     elif 1 < k <= 256:
       return self._top256_cuda.topk_residual_precomputed(
-        data=data,
+        address2id_ptr=address2id_ptr,
         part1=part1,
         part2=part2,
         cells=cells,
         base_sims=base_sims,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
     elif 256 < k <= 512:
       return self._top512_cuda.topk_residual_precomputed(
-        data=data,
+        address2id_ptr=address2id_ptr,
         part1=part1,
         part2=part2,
         cells=cells,
         base_sims=base_sims,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )
     elif 512 < k <= 1024:
       return self._top1024_cuda.topk_residual_precomputed(
-        data=data,
+        address2id_ptr=address2id_ptr,
         part1=part1,
         part2=part2,
         cells=cells,
         base_sims=base_sims,
-        cell_start=cell_start,
+        cell_ptr=cell_ptr,
         cell_size=cell_size,
-        is_empty=is_empty,
+        cell_capacity=cell_capacity,
         n_probe_list=n_probe_list,
         n_candidates=k
       )

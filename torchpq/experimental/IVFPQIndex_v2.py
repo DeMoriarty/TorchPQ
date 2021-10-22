@@ -1,6 +1,6 @@
+from torchpq.kernels.IVFPQTop1Cuda_v2 import IVFPQTop1Cuda_v2
 import torch
 import numpy as np
-from .BaseIndex import BaseIndex
 from ..container import CellContainer
 from ..codec import PQCodec, VQCodec
 from ..fn import IVFPQTopk
@@ -10,7 +10,7 @@ from .. import metric
 
 from time import time
 
-class IVFPQIndex(CellContainer):
+class IVFPQIndex_v2(CellContainer):
   def __init__(
       self,
       d_vector,
@@ -79,9 +79,16 @@ class IVFPQIndex(CellContainer):
       verbose = verbose
     )
 
-    self._ivfpq_topk = IVFPQTopk(
-      n_subvectors = n_subvectors,
-      contiguous_size = self.contiguous_size,
+    # self._ivfpq_topk = IVFPQTopk(
+    #   n_subvectors = n_subvectors,
+    #   contiguous_size = self.contiguous_size,
+    #   sm_size = n_subvectors * 1024,
+    # )
+    self._ivfpq_topk = IVFPQTop1Cuda_v2(
+      m = n_subvectors,
+      k = 256,
+      tpb = 512,
+      n_cs = self.contiguous_size,
       sm_size = n_subvectors * 1024,
     )
 
@@ -435,7 +442,7 @@ class IVFPQIndex(CellContainer):
           cell_size=cell_size,
           is_empty=is_empty,
           n_probe_list=n_probe_list,
-          k=k
+          n_candidates=k
         )
       else:
         precomputed = self.precomputed_adc_residual(x, cells)
@@ -447,7 +454,7 @@ class IVFPQIndex(CellContainer):
           cell_size=cell_size,
           is_empty=is_empty,
           n_probe_list=n_probe_list,
-          k=k
+          n_candidates=k
         )
     else:
       precomputed = self.pq_codec.precompute_adc(x)
@@ -458,7 +465,7 @@ class IVFPQIndex(CellContainer):
         cell_size=cell_size,
         is_empty=is_empty,
         n_probe_list=n_probe_list,
-        k=k
+        n_candidates=k
       )
 
     topk_ids = self.get_id_by_address(topk_address)
@@ -484,7 +491,7 @@ class IVFPQIndex(CellContainer):
     if self.use_cublas:
       # sims = metric.negative_squared_l2_distance(x.half(), vq_codebook.half())
       sims = metric.negative_squared_l2_distance(
-        a = x,
+        a = x, 
         b = vq_codebook, 
         use_tensor_core = self.use_tensor_core, 
         scale_mode = self.fp16_scale_mode
@@ -510,7 +517,7 @@ class IVFPQIndex(CellContainer):
       normalized_entropy = - torch.sum(p * torch.log2(p) / torch.log2(max_n_probe), dim=-1)
       n_probe_list = torch.ceil(normalized_entropy * max_n_probe ).long()
     else:
-      n_probe_list = torch.zeros(n_query, dtype=torch.long, device=self.device) + self.n_probe
+      n_probe_list = torch.zeros(n_query, device=self.device, dtype=torch.long) + self.n_probe
     util.tick("smart probing")
 
     result = self.search_cells(

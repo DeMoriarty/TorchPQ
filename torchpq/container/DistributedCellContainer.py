@@ -1,4 +1,5 @@
 #@title CellContainer
+from typing import List
 import torch
 from .. import util
 from ..kernels import GetDivByAddressV2Cuda
@@ -16,11 +17,18 @@ class BufferList(CustomModule):
       self.register_buffer(f"{i}", buffer_list[i])
 
   def __getitem__(self, key):
+    assert hasattr(self, str(key)), f"item at index {key} does not exist"
     return getattr(self, str(key))
 
   def __setitem__(self, key, value):
-    buffer = getattr(self, str(key))
-    buffer[:] = value
+    if hasattr(self, str(key)):
+      buffer = getattr(self, str(key))
+      buffer[:] = value
+    else:
+      self.register_buffer(f"{key}", value)
+
+  def __delitem__(self, key):
+    delattr(self, str(key))
 
   def __iter__(self):
     for i in range(self.n_buffers):
@@ -29,7 +37,7 @@ class BufferList(CustomModule):
   def get_ptrs(self):
     return [buffer.data_ptr() for buffer in self]
 
-class CellContainer_v2(CustomModule):
+class DistributedCellContainer(CustomModule):
   def __init__(
       self,
       code_size,
@@ -95,7 +103,7 @@ class CellContainer_v2(CustomModule):
     ]
     self._address2id = BufferList(address2id)
 
-    cell_ptr = self.storage.get_ptrs()
+    cell_ptr = self._storage.get_ptrs()
     cell_ptr = torch.tensor(
       cell_ptr,
       dtype=torch.int64,
@@ -112,7 +120,6 @@ class CellContainer_v2(CustomModule):
 
     self.register_buffer("_id2address", None)
 
-
   @property
   def capacity(self):
     return self._capacity
@@ -125,6 +132,10 @@ class CellContainer_v2(CustomModule):
   def max_id(self):
     return self._max_id
 
+  @property
+  def _cell_capacity(self):
+    return [i.shape[0] for i in self._address2id]
+
   def _reshape_data(self, data):
     """
       data:
@@ -136,8 +147,8 @@ class CellContainer_v2(CustomModule):
       assert data.shape[0] == self.code_size
       return data.reshape(
         self.code_size // self.contiguous_size,
+        self.contiguous_size,
         -1,
-        self.contiguous_size
       ).transpose(-1, -2)
 
     elif len(data.shape) == 3:
@@ -151,7 +162,7 @@ class CellContainer_v2(CustomModule):
       raise RuntimeError("invalid tensor shape")
 
   def _get_id_by_address_cpu(self, address):
-    assert util.check_dtype(address, "int32")
+    assert util.check_dtype(address, "int64")
     assert len(address.shape) == 2
     assert address.shape[1] == 2
 
@@ -182,7 +193,7 @@ class CellContainer_v2(CustomModule):
     """
       parameters:
         address: torch.Tensor
-          dtype: int32
+          dtype: int64
           shape: [n_address, 2]
 
       return:
@@ -204,7 +215,7 @@ class CellContainer_v2(CustomModule):
     address = torch.zeros(
       n_ids,
       2,
-      dtype = torch.int32,
+      dtype = torch.int64,
       device = ids.device
     ) * -1
     address[mask] = self._id2address[ids[mask]]
@@ -217,7 +228,7 @@ class CellContainer_v2(CustomModule):
     address = torch.zeros(
       n_ids,
       2,
-      dtype = torch.int32,
+      dtype = torch.int64,
       device = ids.device
     )
     for i in range(n_ids):
@@ -253,7 +264,7 @@ class CellContainer_v2(CustomModule):
       return self._get_address_by_id_cpu(ids)
 
   def _get_data_by_address_cpu(self, address):
-    assert util.check_dtype(address, "int32")
+    assert util.check_dtype(address, "int64")
     assert len(address.shape) == 2
     assert address.shape[1] == 2
 
@@ -281,7 +292,12 @@ class CellContainer_v2(CustomModule):
       item_mask = (0 <= selected_item_idx) & (selected_item_idx < cell_size)
 
       masked_data = data[:, mask].clone()
-      masked_data[item_mask] = storage_cell[:, selected_item_idx][item_mask]
+      # print("cell_size", cell_size)
+      # print("storage_cell", storage_cell.shape)
+      # print("selected_item_idx", selected_item_idx)
+      # print("item_mask", item_mask)
+      # print("masked_data", masked_data.shape)
+      masked_data[:, item_mask] = storage_cell[:, selected_item_idx][:, item_mask]
       data[:, mask] = masked_data
     data = self._reshape_data(data)
     return data
@@ -290,7 +306,7 @@ class CellContainer_v2(CustomModule):
     """
       parameters:
         address: torch.Tensor
-          dtype: int32
+          dtype: int64
           shape: [n_address, 2]
 
       return:
@@ -304,7 +320,7 @@ class CellContainer_v2(CustomModule):
       return self._get_data_by_address_cpu(address)
 
   def _set_data_by_address_cpu(self, data, address):
-    assert util.check_dtype(address, "int32")
+    assert util.check_dtype(address, "int64")
     assert util.check_dtype(data, self.dtype)
     assert len(address.shape) == 2
     assert len(data.shape) == 2
@@ -374,13 +390,145 @@ class CellContainer_v2(CustomModule):
     self._n_items = 0
     self._max_id = -1
 
-  def expand(self):
-    pass
+  def expand_cell(self, cell_index):
+    # cell_size = self._cell_size[cell_index]
+    cell_cap = self._storage[cell_index].shape[1]
+    cell_content = self._storage[cell_index]
+    cell_adr2id = self._address2id[cell_index]
+    del self._storage[cell_index]
+    del self._address2id[cell_index]
 
-  def add(self):
-    pass
+    if self.expand_mode == "step":
+      n_new = self.expand_step_size
+    elif self.expand_mode == "double":
+      n_new = cell_cap
+    
+    new_storage = torch.zeros(
+      self.code_size // self.contiguous_size,
+      cell_cap + n_new,
+      self.contiguous_size,
+      device = self.device,
+      dtype = self.dtype
+    )
+    new_storage[:, :cell_cap] = cell_content
+    self._storage[cell_index] = new_storage
+    self._cell_ptr[cell_index] = new_storage.data_ptr()
 
-  def remove(self):
-    pass
+    new_adr2id = torch.zeros(
+      cell_cap + n_new,
+      device = self.device,
+      dtype = torch.int64
+    ) - 1
+    new_adr2id[:cell_cap] = cell_adr2id
+    self._address2id[cell_index] = new_adr2id
+    return n_new
+
+  def expand(self, cells):
+    n_cells = len(cells)
+    total = 0
+    for cell_index in cells:
+      n_new = self.expand_cell(cell_index)
+      total += n_new
+    self.print_message(f"Total storage capacity is expanded by {total} for {n_cells} cells", 2)
+
+  def add(self, data, cells, ids=None, return_address=False):
+    """
+      parameters:
+        data: torch.Tensor
+          shape : [code_size, n_data]
+          dtype : dtype
+          data to be stored
+
+        cells: torch.Tensor
+          shape : [n_data]
+          dtype : int64
+          cell indices of each datapoint
+
+        ids (optional): torch.Tensor
+          shape : [n_data]
+          dtype : int64
+          ids of each datapoint
+
+        return_address: bool
+          default : False
+
+      return:
+        ids: torch.Tensor
+          shape : [n_data]
+          dtype : int64
+        
+        address (optional): torch.Tensor
+          shape : [n_data, 2]
+          dtype : int64
+    
+    """
+    assert util.check_dtype(data, self.dtype)
+    assert util.check_dtype(cells, torch.int64)
+    assert data.shape == (self.code_size, cells.shape[0])
+    data = data.to(self.device)
+    cells = cells.to(self.device)
+    n_data = data.shape[1]
+
+    if ids is not None:
+      assert util.check_dtype(ids, torch.int64)
+      assert ids.shape[0] == n_data
+      ids = ids.to(self.device)
+
+    else:
+      ids = torch.arange(
+        n_data,
+        device=self.device,
+        dtype=torch.int64,
+      ) + self.max_id + 1
+
+    unique_cells, unique_cell_counts = cells.unique(return_counts=True)
+    if return_address:
+      write_address = torch.zeros(
+        n_data,
+        2,
+        device=self.device,
+        dtype=torch.int64
+      )
+      write_address[:, 0] = cells
+    for cell_index in unique_cells:
+      cell_index = cell_index.item()
+      cell_size = self._cell_size[cell_index]
+      cell_cap = self._storage[cell_index].shape[1]
+      mask = cells == cell_index
+      selected_data = data[:, mask] #[code_size, n_selected_data]
+      selected_ids = ids[mask]
+      n_selected_data = selected_data.shape[1]
+      while cell_cap - cell_size < n_selected_data:
+        self.expand_cell(cell_index)
+        cell_cap = self._storage[cell_index].shape[1]
+      self._storage[cell_index][:, cell_size : cell_size + n_selected_data] = self._reshape_data(selected_data)
+      self._address2id[cell_index][cell_size : cell_size + n_selected_data] = selected_ids
+      if return_address:
+        write_address[mask, 1] = torch.arange(
+          n_selected_data,
+          device=self.device,
+          dtype=torch.int64
+        ) + cell_size
+      self._cell_size[cell_index] += n_selected_data
+    self._max_id = max(self._max_id, ids.max().item())
+    n_unique_cells = unique_cells.shape[0]
+    self.print_message(f"{n_data} new items added to {n_unique_cells} cells", 1)
+
+    if return_address:
+      return (ids, write_address)
+    else:
+      return ids
+
+  def remove(self, ids=None, address=None):
+    raise NotImplementedError
+    # if ids is not None:
+    #   address = self.get_address_by_id(ids)
+    # elif address is not None:
+    #   address = address.to(self.device)
+    #   util.check_dtype(address, torch.int64)
+    # else:
+    #   raise RuntimeError("Need either ids or address")
+    
+    # mask = ()
 
   

@@ -1,5 +1,6 @@
 import torch
 from .BaseContainer import BaseContainer
+from .FlatContainer import FlatContainer
 from .. import util
 
 class FlatContainerGroup(BaseContainer):

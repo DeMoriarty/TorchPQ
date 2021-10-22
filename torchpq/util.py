@@ -1,5 +1,6 @@
 from os import path
 import torch
+from time import time
 
 def get_absolute_path(*relative_path):
   relative_path = path.join(*relative_path)
@@ -79,3 +80,18 @@ def get_maximum_shared_memory_bytes(device_id=0):
 def check_dtype(tensor, *dtype):
   dtype = [str2dtype(i) if type(i) == str else i for i in dtype]
   return tensor.dtype in dtype
+
+__tm = -1
+__silent = False
+def tick(text="", init=False):
+  global __tm
+  global __silent
+  if torch.cuda.is_available():
+    torch.cuda.synchronize()
+  if __silent:
+    return
+  if __tm == -1 or init:
+    print(text, "initialized...")
+  else:
+    print(text, time() - __tm)
+  __tm = time()

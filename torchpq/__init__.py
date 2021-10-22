@@ -1,3 +1,4 @@
+import torch
 try:
   import cupy as cp
 except ModuleNotFoundError:

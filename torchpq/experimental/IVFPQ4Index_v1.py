@@ -1,16 +1,17 @@
+from torchpq.kernels.IVFPQ4Top1Cuda_v1 import IVFPQ4Top1Cuda_v1
 import torch
 import numpy as np
-from .BaseIndex import BaseIndex
 from ..container import CellContainer
 from ..codec import PQCodec, VQCodec
 from ..fn import IVFPQTopk
 from ..fn import Topk
 from .. import util
 from .. import metric
+from .PQ4Codec import PQ4Codec
 
 from time import time
 
-class IVFPQIndex(CellContainer):
+class IVFPQ4Index_v1(CellContainer):
   def __init__(
       self,
       d_vector,
@@ -27,11 +28,12 @@ class IVFPQIndex(CellContainer):
     if torch.device(device).type == "cuda":
       assert torch.cuda.is_available(), "cuda is not available"
       max_sm_bytes = util.get_maximum_shared_memory_bytes()
-      assert n_subvectors <= max_sm_bytes // 1024
+      assert n_subvectors <= max_sm_bytes // 64
     assert d_vector % n_subvectors == 0
+    assert n_subvectors % 8 == 0
 
     super().__init__(
-      code_size = n_subvectors,
+      code_size = n_subvectors // 2,
       n_cells = n_cells,
       dtype = "uint8",
       device = device,
@@ -50,7 +52,7 @@ class IVFPQIndex(CellContainer):
     self.verbose = verbose
     self.pq_use_residual = pq_use_residual
     self.n_probe = 1
-    if pq_use_residual and (n_cells * 256 * n_subvectors * 4) <= 4*1024**3:
+    if pq_use_residual and (n_cells * 16 * n_subvectors * 4) <= 4*1024**3:
       self._use_precomputed = True
     else:
       self._use_precomputed = False
@@ -71,18 +73,25 @@ class IVFPQIndex(CellContainer):
       verbose = verbose
     )
 
-    self.pq_codec = PQCodec(
+    self.pq_codec = PQ4Codec(
       d_vector = d_vector,
       n_subvectors = n_subvectors,
-      n_clusters = 256,
+      n_clusters = 16,
       distance = distance,
       verbose = verbose
     )
 
-    self._ivfpq_topk = IVFPQTopk(
-      n_subvectors = n_subvectors,
-      contiguous_size = self.contiguous_size,
-      sm_size = n_subvectors * 1024,
+    # self._ivfpq_topk = IVFPQTopk(
+    #   n_subvectors = n_subvectors,
+    #   contiguous_size = self.contiguous_size,
+    #   sm_size = n_subvectors * 1024,
+    # )
+    self._ivfpq_topk = IVFPQ4Top1Cuda_v1(
+      m = n_subvectors,
+      k = 16,
+      tpb = 256,
+      n_cs = self.contiguous_size,
+      # sm_size = n_subvectors * 1024,
     )
 
     self._topk = Topk()
@@ -271,7 +280,7 @@ class IVFPQIndex(CellContainer):
       returns:
         torch.Tensor
         dtype : uint8
-        shape : [n_subvectors, n_data]
+        shape : [n_subvectors // 2, n_data]
     """
     assert len(x.shape) == 2
     assert x.shape[0] == self.d_vector
@@ -292,7 +301,7 @@ class IVFPQIndex(CellContainer):
       x:
         torch.Tensor
         dtype : uint8
-        shape : [n_subvectors, n_data]
+        shape : [n_subvectors // 2, n_data]
 
       returns:
         torch.Tensor
@@ -302,7 +311,7 @@ class IVFPQIndex(CellContainer):
     if self.pq_use_residual:
       assert len(x) == 2
       pq_code, vq_code = x
-      assert pq_code.shape[0] == self.n_subvectors
+      assert pq_code.shape[0] == self.n_subvectors // 2
       assert pq_code.shape[1] == vq_code.shape[0]
       residual = self.pq_codec.decode(pq_code)
       recon = self.vq_codec.decode(vq_code)
@@ -310,7 +319,7 @@ class IVFPQIndex(CellContainer):
 
     else:
       assert len(x.shape) == 2
-      assert x.shape[0] == self.n_subvectors
+      assert x.shape[0] == self.n_subvectors // 2
       y = self.pq_codec.decode(x)
     return y
   
@@ -435,7 +444,7 @@ class IVFPQIndex(CellContainer):
           cell_size=cell_size,
           is_empty=is_empty,
           n_probe_list=n_probe_list,
-          k=k
+          n_candidates=k
         )
       else:
         precomputed = self.precomputed_adc_residual(x, cells)
@@ -447,10 +456,12 @@ class IVFPQIndex(CellContainer):
           cell_size=cell_size,
           is_empty=is_empty,
           n_probe_list=n_probe_list,
-          k=k
+          n_candidates=k
         )
     else:
+      util.tick("before precompute")
       precomputed = self.pq_codec.precompute_adc(x)
+      util.tick("after precompute")
       topk_val, topk_address = self._ivfpq_topk.topk(
         data=storage,
         precomputed=precomputed,
@@ -458,10 +469,12 @@ class IVFPQIndex(CellContainer):
         cell_size=cell_size,
         is_empty=is_empty,
         n_probe_list=n_probe_list,
-        k=k
+        n_candidates=k
       )
+      util.tick("after topk")
 
-    topk_ids = self.get_id_by_address(topk_address)
+    topk_ids = topk_address
+    # topk_ids = self.get_id_by_address(topk_address)
     if return_address:
       return topk_val, topk_ids, topk_address
     else:
@@ -484,7 +497,7 @@ class IVFPQIndex(CellContainer):
     if self.use_cublas:
       # sims = metric.negative_squared_l2_distance(x.half(), vq_codebook.half())
       sims = metric.negative_squared_l2_distance(
-        a = x,
+        a = x, 
         b = vq_codebook, 
         use_tensor_core = self.use_tensor_core, 
         scale_mode = self.fp16_scale_mode
@@ -510,7 +523,7 @@ class IVFPQIndex(CellContainer):
       normalized_entropy = - torch.sum(p * torch.log2(p) / torch.log2(max_n_probe), dim=-1)
       n_probe_list = torch.ceil(normalized_entropy * max_n_probe ).long()
     else:
-      n_probe_list = torch.zeros(n_query, dtype=torch.long, device=self.device) + self.n_probe
+      n_probe_list = torch.zeros(n_query, device=self.device, dtype=torch.long) + self.n_probe
     util.tick("smart probing")
 
     result = self.search_cells(
