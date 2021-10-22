@@ -30,6 +30,7 @@ class PQDecodeCuda(CustomKernel):
     self.fn = cp.RawKernel(
       kernel,
       'pq_decode',
+      backend="nvrtc"
     )
 
     self.fn.max_dynamic_shared_size_bytes = self.sm_size

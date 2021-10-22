@@ -1,4 +1,8 @@
 #define isnan(x) ( x != x )
+#ifndef INFINITY
+#define INFINITY __int_as_float(0x7f800000)
+#endif
+
 #if (__CUDA_ARCH__ < 700)
 __device__ void __nanosleep(unsigned int ns){
   clock_t start_clock = clock();

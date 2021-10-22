@@ -25,7 +25,7 @@ class GetAddressByIDCuda(CustomKernel):
     self.fn = cp.RawKernel(
       kernel,
       'get_address_by_id',
-      backend='nvcc',
+      backend='nvrtc',
       # options=('--maxrregcount=255',),
     )
 

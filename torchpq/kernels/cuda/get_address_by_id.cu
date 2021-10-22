@@ -1,3 +1,7 @@
+#ifndef INFINITY
+#define INFINITY __int_as_float(0x7f800000)
+#endif
+
 typedef long long ll_t;
 
 extern "C"

@@ -25,7 +25,7 @@ class GetIOACuda(CustomKernel):
     self.fn = cp.RawKernel(
       kernel,
       'get_ioa',
-      backend='nvcc',
+      backend='nvrtc',
       # options=('--maxrregcount=255',),
     )
 
