@@ -1,11 +1,17 @@
 import torch
-from ..kernels import TopkSelectCuda
+from ..kernels import TopkSelectCuda, Top32SelectCuda, Top1SelectCuda
 
 class Topk:
   def __init__(self):
-    self._top32_cuda = TopkSelectCuda(
-      tpb = 32,
-      queue_capacity = 4,
+
+    self._top1_cuda = Top1SelectCuda(
+      tpb = 256,
+      queue_capacity = 1,
+      buffer_size = 4,
+    )
+    self._top32_cuda = Top32SelectCuda(
+      tpb = 256,
+      queue_capacity = 1,
       buffer_size = 4,
     )
     self._top64_cuda = TopkSelectCuda(
@@ -43,7 +49,8 @@ class Topk:
     assert k >= 1
     assert x.device.type == "cuda"
     if k == 1:
-      return torch.max(x, dim=dim, keepdim=True)
+      # return torch.max(x, dim=dim, keepdim=True)
+      return self._top1_cuda(x, dim=dim, k=k)
     elif k <= 32:
       return self._top32_cuda(x, dim=dim, k=k)
     elif k <= 64:

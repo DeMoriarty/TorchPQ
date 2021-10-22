@@ -29,7 +29,7 @@ class GetDivByAddressV2Cuda(CustomKernel):
     self.fn = cp.RawKernel(
       kernel,
       'get_div_by_address',
-      backend='nvcc',
+      backend='nvrtc',
       # options=('--maxrregcount=255',),
     )
     self.fn.max_dynamic_shared_size_bytes = ta * tpb * 8

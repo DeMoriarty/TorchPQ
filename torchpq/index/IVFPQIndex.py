@@ -8,6 +8,8 @@ from ..fn import Topk
 from .. import util
 from .. import metric
 
+from time import time
+
 class IVFPQIndex(CellContainer):
   def __init__(
       self,
@@ -28,7 +30,7 @@ class IVFPQIndex(CellContainer):
       assert n_subvectors <= max_sm_bytes // 1024
     assert d_vector % n_subvectors == 0
 
-    super(IVFPQIndex, self).__init__(
+    super().__init__(
       code_size = n_subvectors,
       n_cells = n_cells,
       dtype = "uint8",
@@ -56,6 +58,8 @@ class IVFPQIndex(CellContainer):
     self._use_cublas = True
     self._use_smart_probing = True
     self._smart_probing_temperature = 30.0
+    self._use_tensor_core = False
+    self._fp16_scale_mode = "a"
 
     self.vq_codec = VQCodec(
       n_clusters = n_cells,
@@ -91,6 +95,32 @@ class IVFPQIndex(CellContainer):
   def use_cublas(self, value):
     assert type(value) is bool
     self._use_cublas = value
+
+  @property
+  def use_tensor_core(self):
+    return self._use_tensor_core
+
+  @use_tensor_core.setter
+  def use_tensor_core(self, value):
+    assert type(value) is bool
+    assert self.use_cublas
+    # assert util.get_tensor_core_availability(torch.device(self.device).index)
+
+    if util.get_tensor_core_availability(torch.device(self.device).index):
+      self._use_tensor_core = value
+    else:
+      self._use_tensor_core = False
+      if value:
+        self.print_message("warning: Tensor core not available", 1)
+
+  @property
+  def fp16_scale_mode(self):
+    return self._fp16_scale_mode
+
+  @fp16_scale_mode.setter
+  def fp16_scale_mode(self, value):
+    assert value in ["a", "b", "both", "none"]
+    self._fp16_scale_mode = value
 
   @property
   def use_smart_probing(self):
@@ -327,7 +357,7 @@ class IVFPQIndex(CellContainer):
     else:
       quantized_x = self.encode(x)
 
-    return super(IVFPQIndex, self).add(
+    return super().add(
       quantized_x,
       cells=assigned_cells,
       ids=ids,
@@ -438,6 +468,7 @@ class IVFPQIndex(CellContainer):
       return topk_val, topk_ids
 
   def search(self, x, k=1, return_address=False):
+    util.tick(init=True)
     assert len(x.shape) == 2
     assert x.shape[0] == self.d_vector
     assert 0 < k <= 1024
@@ -448,12 +479,21 @@ class IVFPQIndex(CellContainer):
     is_empty = self._is_empty
     vq_codebook = self.vq_codec.codebook
 
+    util.tick("checks")
     # find n_probe closest cells
     if self.use_cublas:
       # sims = metric.negative_squared_l2_distance(x.half(), vq_codebook.half())
-      sims = metric.negative_squared_l2_distance(x, vq_codebook, use_tensor_core=False)
-      sims = sims.float().contiguous()
+      sims = metric.negative_squared_l2_distance(
+        a = x,
+        b = vq_codebook, 
+        use_tensor_core = self.use_tensor_core, 
+        scale_mode = self.fp16_scale_mode
+      )
+      util.tick("negative_squared_l2_distance")
+      sims = sims.contiguous()
+      util.tick("contiguous")
       topk_sims, cells = self._topk(sims, k=self.n_probe, dim=1)
+      util.tick("topk")
     else:
       topk_sims, cells = self.vq_codec.kmeans.topk(x, k=self.n_probe)
     
@@ -470,9 +510,10 @@ class IVFPQIndex(CellContainer):
       normalized_entropy = - torch.sum(p * torch.log2(p) / torch.log2(max_n_probe), dim=-1)
       n_probe_list = torch.ceil(normalized_entropy * max_n_probe ).long()
     else:
-      n_probe_list = None
+      n_probe_list = torch.zeros(n_query, dtype=torch.long, device=self.device) + self.n_probe
+    util.tick("smart probing")
 
-    return self.search_cells(
+    result = self.search_cells(
       x=x, 
       cells=cells,
       base_sims=topk_sims,
@@ -480,5 +521,6 @@ class IVFPQIndex(CellContainer):
       k=k,
       return_address=False
     )
-    
+    util.tick("second step")
+    return result
     

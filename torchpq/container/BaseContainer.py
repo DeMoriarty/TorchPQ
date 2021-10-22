@@ -22,6 +22,7 @@ class BaseContainer(CustomModule, ABC):
     assert expand_step_size > 0
 
     self.device = device
+    self.device_type = torch.device(device).type
     self.initial_size = initial_size
     self.expand_step_size = expand_step_size
     self.expand_mode = expand_mode

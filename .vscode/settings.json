@@ -1,0 +1,8 @@
+{
+  "editor.tabSize": 2,
+  "editor.hover.enabled": false,
+  "editor.hover.delay": 2000,
+  "editor.hover.sticky": false,
+  "workbench.hover.delay": 2000,
+  "editor.parameterHints": false
+}
