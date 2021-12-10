@@ -189,7 +189,7 @@ __global__ void max_sim_tn(
 ){
   int tid = threadIdx.x;
   int bid, gStartx, gStarty;
-  if (DIM == 1){
+  if (DIM == 2){
     bid = blockIdx.z;
     gStartx = blockIdx.y * 128;
     gStarty = blockIdx.x * 128;
@@ -318,7 +318,7 @@ __global__ void max_sim_nt(
 ){
   int tid = threadIdx.x;
   int bid, gStartx, gStarty;
-  if (DIM == 1){
+  if (DIM == 2){
     bid = blockIdx.z;
     gStartx = blockIdx.y * 128;
     gStarty = blockIdx.x * 128;
@@ -446,7 +446,7 @@ __global__ void max_sim_nn(
 ){
   int tid = threadIdx.x;
   int bid, gStartx, gStarty;
-  if (DIM == 1){
+  if (DIM == 2){
     bid = blockIdx.z;
     gStartx = blockIdx.y * 128;
     gStarty = blockIdx.x * 128;
@@ -593,7 +593,7 @@ __global__ void max_sim_tt(
 ){
   int tid = threadIdx.x;
   int bid, gStartx, gStarty;
-  if (DIM == 1){
+  if (DIM == 2){
     bid = blockIdx.z;
     gStartx = blockIdx.y * 128;
     gStarty = blockIdx.x * 128;

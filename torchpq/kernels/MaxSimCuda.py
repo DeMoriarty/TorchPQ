@@ -99,11 +99,11 @@ class MaxSimCuda(CustomKernel):
     if dim == 1:
       vals = torch.full([l, n], fill_value=float("-inf"), device="cuda:0", dtype=A.dtype)
       inds = torch.empty([l, n], device="cuda:0", dtype=torch.long)
-      blocks_per_grid = (math.ceil(m/128), math.ceil(n/128), l)
+      blocks_per_grid = (math.ceil(n/128), math.ceil(m/128), l)
     elif dim == 2:
       vals = torch.full([l, m], fill_value=float("-inf"), device="cuda:0", dtype=A.dtype)
       inds = torch.empty([l, m], device="cuda:0", dtype=torch.long)
-      blocks_per_grid = (math.ceil(n/128), math.ceil(m/128), l)
+      blocks_per_grid = (math.ceil(m/128), math.ceil(n/128), l)
 
     threads_per_block = (256,)
 
@@ -153,11 +153,11 @@ class MaxSimCuda(CustomKernel):
     if dim == 1:
       vals = torch.full([l, n], fill_value=float("-inf"), device="cuda:0", dtype=A.dtype)
       inds = torch.empty([l, n], device="cuda:0", dtype=torch.long)
-      blocks_per_grid = (math.ceil(m/128), math.ceil(n/128), l)
+      blocks_per_grid = (math.ceil(n/128), math.ceil(m/128), l)
     elif dim == 2:
       vals = torch.full([l, m], fill_value=float("-inf"), device="cuda:0", dtype=A.dtype)
       inds = torch.empty([l, m], device="cuda:0", dtype=torch.long)
-      blocks_per_grid = (math.ceil(n/128), math.ceil(m/128), l)
+      blocks_per_grid = (math.ceil(m/128), math.ceil(n/128), l)
 
 
     threads_per_block = (256,)
@@ -208,11 +208,11 @@ class MaxSimCuda(CustomKernel):
     if dim == 1:
       vals = torch.full([l, n], fill_value=float("-inf"), device="cuda:0", dtype=A.dtype)
       inds = torch.empty([l, n], device="cuda:0", dtype=torch.long)
-      blocks_per_grid = (math.ceil(m/128), math.ceil(n/128), l)
+      blocks_per_grid = (math.ceil(n/128), math.ceil(m/128), l)
     elif dim == 2:
       vals = torch.full([l, m], fill_value=float("-inf"), device="cuda:0", dtype=A.dtype)
       inds = torch.empty([l, m], device="cuda:0", dtype=torch.long)
-      blocks_per_grid = (math.ceil(n/128), math.ceil(m/128), l)
+      blocks_per_grid = (math.ceil(m/128), math.ceil(n/128), l)
 
     threads_per_block = (256,)
     # blocks_per_grid = (l, math.ceil(n/128), math.ceil(m/128))
@@ -262,11 +262,11 @@ class MaxSimCuda(CustomKernel):
     if dim == 1:
       vals = torch.full([l, n], fill_value=float("-inf"), device="cuda:0", dtype=A.dtype)
       inds = torch.empty([l, n], device="cuda:0", dtype=torch.long)
-      blocks_per_grid = (math.ceil(m/128), math.ceil(n/128), l)
+      blocks_per_grid = (math.ceil(n/128), math.ceil(m/128), l)
     elif dim == 2:
       vals = torch.full([l, m], fill_value=float("-inf"), device="cuda:0", dtype=A.dtype)
       inds = torch.empty([l, m], device="cuda:0", dtype=torch.long)
-      blocks_per_grid = (math.ceil(n/128), math.ceil(m/128), l)
+      blocks_per_grid = (math.ceil(m/128), math.ceil(n/128), l)
 
     threads_per_block = (256,)
     # blocks_per_grid = (l, math.ceil(n/128), math.ceil(m/128))
