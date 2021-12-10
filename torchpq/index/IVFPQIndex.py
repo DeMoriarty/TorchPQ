@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-from .BaseIndex import BaseIndex
 from ..container import CellContainer
 from ..codec import PQCodec, VQCodec
 from ..fn import IVFPQTopk

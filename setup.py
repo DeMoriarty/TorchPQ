@@ -1,14 +1,15 @@
 from setuptools import setup, find_packages
+from torchpq._version import __version__
 setup(
   name = 'torchpq',
   packages = find_packages(),
-  version = '0.3.0.0',
+  version = __version__,
   license='MIT',
   description = 'Efficient implementations of Product Quantization and its variants',
   author = 'demoriarty', 
   author_email = 'sahbanjan@gmail.com',
   url = 'https://github.com/DeMoriarty/TorchPQ',
-  download_url = 'https://github.com/DeMoriarty/TorchPQ/archive/v_0300.tar.gz',
+  download_url = f'https://github.com/DeMoriarty/TorchPQ/archive/v_{__version__.replace(".", "")}.tar.gz',
   keywords = ['KMeans', 'K-means', 'ANN', 'pytorch','machine learning', 'pq', 'product quantization', 'IVFPQ', 'approximate nearest neighbors'],
   install_requires=[ 
     'numpy',

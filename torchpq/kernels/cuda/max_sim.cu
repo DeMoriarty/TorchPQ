@@ -188,9 +188,16 @@ __global__ void max_sim_tn(
   int M, int N, int K, int DIM
 ){
   int tid = threadIdx.x;
-  int bid = blockIdx.x;
-  int gStartx = blockIdx.y * 128;
-  int gStarty = blockIdx.z * 128;
+  int bid, gStartx, gStarty;
+  if (DIM == 1){
+    bid = blockIdx.z;
+    gStartx = blockIdx.y * 128;
+    gStarty = blockIdx.x * 128;
+  } else {
+    bid = blockIdx.z;
+    gStartx = blockIdx.x * 128;
+    gStarty = blockIdx.y * 128;
+  }
 
   int vx = tid % 16;
   int vy = tid / 16;
@@ -310,9 +317,16 @@ __global__ void max_sim_nt(
   int M, int N, int K, int DIM
 ){
   int tid = threadIdx.x;
-  int bid = blockIdx.x;
-  int gStartx = blockIdx.y * 128;
-  int gStarty = blockIdx.z * 128;
+  int bid, gStartx, gStarty;
+  if (DIM == 1){
+    bid = blockIdx.z;
+    gStartx = blockIdx.y * 128;
+    gStarty = blockIdx.x * 128;
+  } else {
+    bid = blockIdx.z;
+    gStartx = blockIdx.x * 128;
+    gStarty = blockIdx.y * 128;
+  }
 
   int vx = tid % 16;
   int vy = tid / 16;
@@ -431,9 +445,16 @@ __global__ void max_sim_nn(
   int M, int N, int K, int DIM
 ){
   int tid = threadIdx.x;
-  int bid = blockIdx.x;
-  int gStartx = blockIdx.y * 128;
-  int gStarty = blockIdx.z * 128;
+  int bid, gStartx, gStarty;
+  if (DIM == 1){
+    bid = blockIdx.z;
+    gStartx = blockIdx.y * 128;
+    gStarty = blockIdx.x * 128;
+  } else {
+    bid = blockIdx.z;
+    gStartx = blockIdx.x * 128;
+    gStarty = blockIdx.y * 128;
+  }
 
   int vx = tid % 16;
   int vy = tid / 16;
@@ -571,9 +592,16 @@ __global__ void max_sim_tt(
   int M, int N, int K, int DIM
 ){
   int tid = threadIdx.x;
-  int bid = blockIdx.x;
-  int gStartx = blockIdx.y * 128;
-  int gStarty = blockIdx.z * 128;
+  int bid, gStartx, gStarty;
+  if (DIM == 1){
+    bid = blockIdx.z;
+    gStartx = blockIdx.y * 128;
+    gStarty = blockIdx.x * 128;
+  } else {
+    bid = blockIdx.z;
+    gStartx = blockIdx.x * 128;
+    gStarty = blockIdx.y * 128;
+  }
 
   int vx = tid % 16;
   int vy = tid / 16;

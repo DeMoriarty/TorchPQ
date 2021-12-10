@@ -9,7 +9,7 @@ from . import codec
 from . import transform
 from . import clustering
 from . import kernels
-from . import experimental
+# from . import experimental
 from . import metric
 from . import util
 from . import legacy
@@ -17,5 +17,6 @@ from . import index
 from . import fn
 
 from .CustomModule import CustomModule
+from ._version import __version__
 
 topk = fn.Topk()
