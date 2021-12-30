@@ -115,7 +115,7 @@ Sometimes, we have multiple independent datasets that need to be clustered,
 instead of running multiple KMeans sequentianlly,
 we can perform multiple kmeans concurrently with **MultiKMeans**
 ```python
-from torchpq.kmeans import MultiKMeans
+from torchpq.clustering import MultiKMeans
 import torch
 
 n_data = 1000000
