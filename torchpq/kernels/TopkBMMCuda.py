@@ -122,15 +122,16 @@ class TopkBMMCuda(CustomKernel):
 
     l, m, d = A.shape
     l, d, n = B.shape
+    device = A.device
 
     if dim == 1:
-      values = torch.empty([l, n, 128], device="cuda:0", dtype=A.dtype)
-      indices = torch.empty([l, n, 128], device="cuda:0", dtype=torch.int64)
-      mutex = torch.zeros([l, n], device="cuda:0", dtype=torch.int32)
+      values = torch.empty([l, n, 128], device=device, dtype=A.dtype)
+      indices = torch.empty([l, n, 128], device=device, dtype=torch.int64)
+      mutex = torch.zeros([l, n], device=device, dtype=torch.int32)
     elif dim == 2:
-      values = torch.empty([l, m, 128], device="cuda:0", dtype=A.dtype)
-      indices = torch.empty([l, m, 128], device="cuda:0", dtype=torch.int64)
-      mutex = torch.zeros([l, m], device="cuda:0", dtype=torch.int32)
+      values = torch.empty([l, m, 128], device=device, dtype=A.dtype)
+      indices = torch.empty([l, m, 128], device=device, dtype=torch.int64)
+      mutex = torch.zeros([l, m], device=device, dtype=torch.int32)
     values.fill_(float("-inf"))
 
     threads_per_block = (256,)

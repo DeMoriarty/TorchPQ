@@ -72,7 +72,8 @@ class MBMMCuda(CustomKernel):
       assert thread_mask.shape == (l, math.ceil(m / 8), math.ceil(n / 8)) ###
       assert element_mask.shape == (l, m, n)
     
-    C = torch.zeros(l, m, n, device="cuda:0", dtype=A.dtype)
+    device = A.device
+    C = torch.zeros(l, m, n, device=device, dtype=A.dtype)
 
     threads_per_block = (256,)
 

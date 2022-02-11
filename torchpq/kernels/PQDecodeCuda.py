@@ -45,8 +45,8 @@ class PQDecodeCuda(CustomKernel):
     m, n = code.shape
     assert codebook.shape[0] == code.shape[0]
     assert k == 256
-
-    result = torch.ones(m, d, n, device="cuda:0", dtype=torch.float)
+    device = codebook.device
+    result = torch.ones(m, d, n, device=device, dtype=torch.float)
 
     threads_per_block = (self.tpb,)
     blocks_per_grid = (math.ceil(m/self.tm), math.ceil(d/self.td))

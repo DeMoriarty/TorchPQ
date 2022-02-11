@@ -358,8 +358,8 @@ class IVFPQR(IVFPQBase):
       o, n_data, n_cs = data.shape
       n_subvectors_r, n_query, n_pq_clusters = precomputed
       assert n_subvectors_r == o * n_cs
-
-      arange = torch.arange(n_subvectors_r, device="cuda:0")
+      device = data.device
+      arange = torch.arange(n_subvectors_r, device=device)
       data = data.transpose(1, 2).reshape(n_subvectors_r, n_data) #[n_subvectors_r, n_data]
       result = precomputed[arange, :, data[:].long() ].sum(dim=1).T #[]
       return result

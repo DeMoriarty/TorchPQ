@@ -43,7 +43,7 @@ def negative_squared_l2_distance(a, b, inplace=False, use_tensor_core=False, sca
       returns: torch.Tensor, shape : [l, m, n]
     """
     # peak mem usage: m*n*4 + max(m,n)*4 + inplace ? 0: (m+n)*d*4
-    util.tick("enter negative squared l2")
+    # util.tick("enter negative squared l2")
     if use_tensor_core and util.get_tensor_core_availability(a.device.index):
       if scale_mode == "a":
         a_max = a.abs().max()
@@ -73,11 +73,11 @@ def negative_squared_l2_distance(a, b, inplace=False, use_tensor_core=False, sca
         y.mul_(a_max * b_max)
     else:
       aT = a.transpose(-2, -1).contiguous()
-      util.tick("transpose")
+      # util.tick("transpose")
       y = aT @ b # [m, n] <m*n*4>
       # y = torch.mm(aT, b)
       # y = torch.matmul(aT, b)
-      util.tick("matmul")
+      # util.tick("matmul")
     y.mul_(2)
     if inplace:
       a.pow_(2)
@@ -85,14 +85,14 @@ def negative_squared_l2_distance(a, b, inplace=False, use_tensor_core=False, sca
     else:
       a = a ** 2 #[m, d], <m*n*4 + m*d*4>
       b = b ** 2 #[n, d], <m*n*4 + n*d*4 + m*d*4>
-    util.tick("a,b pow2")
+    # util.tick("a,b pow2")
     a2 = a.sum(dim=-2)[..., :, None] #? [m], <m*n*4 + m*4> + <n*d*4 + m*d*4>
     y.sub_(a2)
-    util.tick("y - a.sum()")
+    # util.tick("y - a.sum()")
     del a2
     b2 = b.sum(dim=-2)[..., None, :] #[n], <m*n*4 + n*4> + <n*d*4 + m*d*4>
     y.sub_(b2)
-    util.tick("y - b.sum()")
+    # util.tick("y - b.sum()")
     if inplace:
       a.sqrt_()
       b.sqrt_()

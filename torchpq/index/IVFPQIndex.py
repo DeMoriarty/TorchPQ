@@ -467,7 +467,7 @@ class IVFPQIndex(CellContainer):
       return topk_val, topk_ids
 
   def search(self, x, k=1, return_address=False):
-    util.tick(init=True)
+    # util.tick(init=True)
     assert len(x.shape) == 2
     assert x.shape[0] == self.d_vector
     assert 0 < k <= 1024
@@ -478,7 +478,7 @@ class IVFPQIndex(CellContainer):
     is_empty = self._is_empty
     vq_codebook = self.vq_codec.codebook
 
-    util.tick("checks")
+    # util.tick("checks")
     # find n_probe closest cells
     if self.use_cublas:
       # sims = metric.negative_squared_l2_distance(x.half(), vq_codebook.half())
@@ -488,11 +488,11 @@ class IVFPQIndex(CellContainer):
         use_tensor_core = self.use_tensor_core, 
         scale_mode = self.fp16_scale_mode
       )
-      util.tick("negative_squared_l2_distance")
+      # util.tick("negative_squared_l2_distance")
       sims = sims.contiguous()
-      util.tick("contiguous")
+      # util.tick("contiguous")
       topk_sims, cells = self._topk(sims, k=self.n_probe, dim=1)
-      util.tick("topk")
+      # util.tick("topk")
     else:
       topk_sims, cells = self.vq_codec.kmeans.topk(x, k=self.n_probe)
     
@@ -510,7 +510,7 @@ class IVFPQIndex(CellContainer):
       n_probe_list = torch.ceil(normalized_entropy * max_n_probe ).long()
     else:
       n_probe_list = torch.zeros(n_query, dtype=torch.long, device=self.device) + self.n_probe
-    util.tick("smart probing")
+    # util.tick("smart probing")
 
     result = self.search_cells(
       x=x, 
@@ -520,6 +520,6 @@ class IVFPQIndex(CellContainer):
       k=k,
       return_address=False
     )
-    util.tick("second step")
+    # util.tick("second step")
     return result
     

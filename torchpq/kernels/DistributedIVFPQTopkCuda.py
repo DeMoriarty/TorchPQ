@@ -118,12 +118,13 @@ class DistributedIVFPQTopkCuda(CustomKernel):
       assert n_candidates <= self.tpb
     n_candidates_pow_of_2 = 2 * self.next_power_of_2(math.ceil(n_candidates / 2))
     assert n_candidates_pow_of_2 in [2 * 2**i for i in range(10)]
+    device = address2id_ptr.device
 
     cell_info = torch.stack([cell_size, cell_ptr, cell_capacity], dim=-1)
     tot_size = cell_size.sum(dim=1)
-    values = torch.empty(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.float32)
+    values = torch.empty(n_query, n_candidates_pow_of_2, device=device, dtype=torch.float32)
     values.fill_(float("-inf"))
-    indices = torch.zeros(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.int64)
+    indices = torch.zeros(n_query, n_candidates_pow_of_2, device=device, dtype=torch.int64)
     threads_per_block = (self.tpb,)
     blocks_per_grid = (n_query,)
 
@@ -188,12 +189,13 @@ class DistributedIVFPQTopkCuda(CustomKernel):
       assert n_candidates <= self.tpb
     n_candidates_pow_of_2 = 2 * self.next_power_of_2(math.ceil(n_candidates / 2))
     assert n_candidates_pow_of_2 in [2 * 2**i for i in range(10)]
+    device = address2id_ptr.device
 
     cell_info = torch.stack([cell_size, cell_ptr, cell_capacity], dim=-1)
     tot_size = cell_size.sum(dim=1)
-    values = torch.empty(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.float32)
+    values = torch.empty(n_query, n_candidates_pow_of_2, device=device, dtype=torch.float32)
     values.fill_(float("-inf"))
-    indices = torch.zeros(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.int64)
+    indices = torch.zeros(n_query, n_candidates_pow_of_2, device=device, dtype=torch.int64)
     threads_per_block = (self.tpb,)
     blocks_per_grid = (n_query,)
 
@@ -265,12 +267,13 @@ class DistributedIVFPQTopkCuda(CustomKernel):
       assert n_candidates <= self.tpb
     n_candidates_pow_of_2 = 2 * self.next_power_of_2(math.ceil(n_candidates / 2))
     assert n_candidates_pow_of_2 in [2 * 2**i for i in range(10)]
+    device = address2id_ptr.device
 
     cell_info = torch.stack([cell_size, cell_ptr, cell_capacity], dim=-1)
     tot_size = cell_size.sum(dim=1)
-    values = torch.empty(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.float32)
+    values = torch.empty(n_query, n_candidates_pow_of_2, device=device, dtype=torch.float32)
     values.fill_(float("-inf"))
-    indices = torch.zeros(n_query, n_candidates_pow_of_2, device="cuda:0", dtype=torch.int64)
+    indices = torch.zeros(n_query, n_candidates_pow_of_2, device=device, dtype=torch.int64)
     threads_per_block = (self.tpb,)
     blocks_per_grid = (n_query,)
 

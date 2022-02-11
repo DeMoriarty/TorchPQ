@@ -71,9 +71,9 @@ class ComputeProductCuda(CustomKernel):
 
     if max_out_size is None:
       max_out_size = div_size.sum(dim=1).max().item()
-    values = torch.empty(n_query, max_out_size, device="cuda:0", dtype=torch.float32)
+    values = torch.empty(n_query, max_out_size, device=data.device, dtype=torch.float32)
     values.fill_(float("-inf"))
-    indices = torch.zeros(n_query, max_out_size, device="cuda:0", dtype=torch.int32) #?
+    indices = torch.zeros(n_query, max_out_size, device=data.device, dtype=torch.int32) #?
 
     threads_per_block = (self.tpb,)
     blocks_per_grid = (n_query,)

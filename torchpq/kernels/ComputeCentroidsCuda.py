@@ -56,12 +56,12 @@ class ComputeCentroidsCuda(CustomKernel):
 
     # data = data.transpose(1, 2).contiguous()
 
-    centroids = torch.zeros(m, d_vector, k, device="cuda:0", dtype=torch.float32)
+    centroids = torch.zeros(m, d_vector, k, device=data.device, dtype=torch.float32)
     threads_per_block = (self.tpb,)
     blocks_per_grid = (m, math.ceil(k / self.dk) , math.ceil(d_vector / self.de))
     # print("Blocks per grid", blocks_per_grid)
 
-    torch.cuda.synchronize()
+    # torch.cuda.synchronize(data.device)
     self.fn(
       grid=blocks_per_grid,
       block=threads_per_block,
@@ -77,5 +77,5 @@ class ComputeCentroidsCuda(CustomKernel):
         ],
       stream=self.stream
     )
-    torch.cuda.synchronize()
+    # torch.cuda.synchronize(data.device)
     return centroids

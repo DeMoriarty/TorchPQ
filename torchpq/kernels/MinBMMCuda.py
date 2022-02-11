@@ -120,12 +120,14 @@ class MinBMMCuda(CustomKernel):
     l, m, k = A.shape
     l, k, n = B.shape
 
+    device = A.device
+
     if dim == 1:
-      values = torch.empty([l, n], device="cuda:0", dtype=A.dtype)
-      indices = torch.empty([l, n], device="cuda:0", dtype=torch.int64)
+      values = torch.empty([l, n], device=device, dtype=A.dtype)
+      indices = torch.empty([l, n], device=device, dtype=torch.int64)
     elif dim == 2:
-      values = torch.empty([l, m], device="cuda:0", dtype=A.dtype)
-      indices = torch.empty([l, m], device="cuda:0", dtype=torch.int64)
+      values = torch.empty([l, m], device=device, dtype=A.dtype)
+      indices = torch.empty([l, m], device=device, dtype=torch.int64)
     values.fill_(float("inf"))
 
     threads_per_block = (256,)

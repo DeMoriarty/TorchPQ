@@ -106,7 +106,7 @@ class BMMCuda(CustomKernel):
     l, m, k = A.shape
     l, k, n = B.shape
 
-    C = torch.zeros([l, m, n], device="cuda:0", dtype=A.dtype)
+    C = torch.zeros([l, m, n], device=A.device, dtype=A.dtype)
 
     threads_per_block = (256,)
     #blocks_per_grid = (math.ceil(n/128), math.ceil(m/128), l)

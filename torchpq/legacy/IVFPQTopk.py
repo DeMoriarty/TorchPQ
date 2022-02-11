@@ -59,10 +59,11 @@ class IVFPQTopk:
     max_out_size = div_size.sum(dim=1).max().item()
     n_subvectors, n_query, n_clusters = precomputed.shape
     n_probe = div_start.shape[1]
+    device = data.device
 
 
-    final_v = torch.zeros(n_query, k, device="cuda:0", dtype=torch.float32)
-    final_i = torch.zeros(n_query, k, device="cuda:0", dtype=torch.int32)
+    final_v = torch.zeros(n_query, k, device=device, dtype=torch.float32)
+    final_i = torch.zeros(n_query, k, device=device, dtype=torch.int32)
     remaining = self.remaining_memory()
     n_partitions = 1
     while True:

@@ -132,7 +132,7 @@ class MinibatchKMeans(CustomModule):
       remaining = 32 * 1024 ** 3 # just a random large number
     elif device.type == "cuda":
       torch.cuda.empty_cache()
-      total_memory = torch.cuda.get_device_properties(0).total_memory
+      total_memory = torch.cuda.get_device_properties(device).total_memory
       remaining = total_memory - torch.cuda.memory_reserved()
       # remaining = total_memory - torch.cuda.memory_allocated()
     return remaining

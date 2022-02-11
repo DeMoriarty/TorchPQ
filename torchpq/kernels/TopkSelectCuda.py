@@ -62,13 +62,14 @@ class TopkSelectCuda(CustomKernel):
     assert dim == 1
     assert x.is_contiguous()
     k_pow_of_2 = self.next_power_of_2(k)
+    device = x.device
 
     m, n = x.shape
     threads_per_block = (self.tpb, )
     blocks_per_grid = (m, )
-    values = torch.empty(m, k_pow_of_2, device="cuda:0", dtype=x.dtype)
+    values = torch.empty(m, k_pow_of_2, device=device, dtype=x.dtype)
     values.fill_(float("-inf"))
-    indices = torch.empty(m, k_pow_of_2, device="cuda:0", dtype=torch.long)
+    indices = torch.empty(m, k_pow_of_2, device=device, dtype=torch.long)
 
     self._fn(
       grid = blocks_per_grid,

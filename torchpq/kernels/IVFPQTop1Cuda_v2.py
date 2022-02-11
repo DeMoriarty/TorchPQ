@@ -112,11 +112,12 @@ class IVFPQTop1Cuda_v2(CustomKernel):
     assert n_probe_list.shape == (n_query, )
     assert n_probe_list.dtype == torch.int64
     assert n_candidates == 1
+    device = data.device
 
     tot_size = cell_size.sum(dim=1)
-    values = torch.empty(n_query, 1, device="cuda:0", dtype=torch.float32)
+    values = torch.empty(n_query, 1, device=device, dtype=torch.float32)
     values.fill_(float("-inf"))
-    indices = torch.zeros(n_query, 1, device="cuda:0", dtype=torch.int64)
+    indices = torch.zeros(n_query, 1, device=device, dtype=torch.int64)
     threads_per_block = (self.tpb,)
     blocks_per_grid = (n_query,)
 
@@ -170,11 +171,12 @@ class IVFPQTop1Cuda_v2(CustomKernel):
     assert n_probe_list.shape == (n_query, )
     assert n_probe_list.dtype == torch.int64
     base_sims = base_sims.contiguous()
+    device = data.device
 
     tot_size = cell_size.sum(dim=1)
-    values = torch.empty(n_query, 1, device="cuda:0", dtype=torch.float32)
+    values = torch.empty(n_query, 1, device=device, dtype=torch.float32)
     values.fill_(float("-inf"))
-    indices = torch.zeros(n_query, 1, device="cuda:0", dtype=torch.int64)
+    indices = torch.zeros(n_query, 1, device=device, dtype=torch.int64)
     threads_per_block = (self.tpb,)
     blocks_per_grid = (n_query,)
 
@@ -235,11 +237,12 @@ class IVFPQTop1Cuda_v2(CustomKernel):
     part2 = part2.contiguous()
     cells = cells.contiguous()
     base_sims = base_sims.contiguous()
+    device = data.device
 
     tot_size = cell_size.sum(dim=1)
-    values = torch.empty(n_query, 1, device="cuda:0", dtype=torch.float32)
+    values = torch.empty(n_query, 1, device=device, dtype=torch.float32)
     values.fill_(float("-inf"))
-    indices = torch.zeros(n_query, 1, device="cuda:0", dtype=torch.int64)
+    indices = torch.zeros(n_query, 1, device=device, dtype=torch.int64)
     threads_per_block = (self.tpb,)
     blocks_per_grid = (n_query,)
 
