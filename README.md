@@ -3,11 +3,12 @@ TorchPQ is a python library for **Approximate Nearest Neighbor Search** (ANNS) a
 
 ## Install
 - make sure you have the latest version of PyTorch installed: https://pytorch.org/get-started/locally/
-- install a version of CuPy library that matches your CUDA version
+- install or upgrade to CUDA toolkit 11.0 or greater
+- install a version of CuPy library that matches your CUDA toolkit version
 ```
-pip install cupy-cuda90
-pip install cupy-cuda100
-pip install cupy-cuda101
+pip install cupy-cuda110
+pip install cupy-cuda111
+pip install cupy-cuda112
 ...
 ```
 for a full list of cupy-cuda versions, please go to [Installation Guide](https://docs.cupy.dev/en/stable/install.html#installing-cupy)
@@ -115,7 +116,7 @@ Sometimes, we have multiple independent datasets that need to be clustered,
 instead of running multiple KMeans sequentianlly,
 we can perform multiple kmeans concurrently with **MultiKMeans**
 ```python
-from torchpq.kmeans import MultiKMeans
+from torchpq.clustering import MultiKMeans
 import torch
 
 n_data = 1000000
