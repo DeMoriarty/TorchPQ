@@ -1,6 +1,8 @@
 import cupy as cp
 import torch
 
+DEVICE = cp.cuda.Device().id
+
 @cp.memoize(for_each_device=True)
 def cunnex(func_name, func_body):
   return cp.cuda.compile_with_cache(func_body).get_function(func_name)
@@ -12,12 +14,11 @@ class Stream:
 class CustomKernel:
   def __init__(self):
     self._use_torch_in_cupy_malloc()
-    self.stream = Stream(torch.cuda.current_stream().cuda_stream)
+    self.stream = Stream(torch.cuda.current_stream(DEVICE).cuda_stream)
 
   @staticmethod
   def _torch_alloc(size):
-    device = cp.cuda.Device().id
-    tensor = torch.empty(size, dtype=torch.uint8, device=device)
+    tensor = torch.empty(size, dtype=torch.uint8, device=DEVICE)
     return cp.cuda.MemoryPointer(
         cp.cuda.UnownedMemory(tensor.data_ptr(), size, tensor), 0)
 
