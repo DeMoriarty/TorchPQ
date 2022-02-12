@@ -1,8 +1,7 @@
-import cupy as cp
-DEVICE = cp.cuda.Device().id
-
 from .CustomKernel import CustomKernel
 from .CustomKernel import Stream
+
+from .default_device import get_default_device, set_default_device
 
 from .GetAddressByIDCuda import GetAddressByIDCuda
 from .GetDivByAddressCuda import GetDivByAddressCuda

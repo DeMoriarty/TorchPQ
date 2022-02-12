@@ -1,6 +1,6 @@
 import cupy as cp
 import torch
-from torchpq.kernels import DEVICE
+from torchpq.kernels.default_device import get_default_device
 
 @cp.memoize(for_each_device=True)
 def cunnex(func_name, func_body):
@@ -13,11 +13,11 @@ class Stream:
 class CustomKernel:
   def __init__(self):
     self._use_torch_in_cupy_malloc()
-    self.stream = Stream(torch.cuda.current_stream(DEVICE).cuda_stream)
+    self.stream = Stream(torch.cuda.current_stream(get_default_device()).cuda_stream)
 
   @staticmethod
   def _torch_alloc(size):
-    tensor = torch.empty(size, dtype=torch.uint8, device=DEVICE)
+    tensor = torch.empty(size, dtype=torch.uint8, device=get_default_device())
     return cp.cuda.MemoryPointer(
         cp.cuda.UnownedMemory(tensor.data_ptr(), size, tensor), 0)
 
