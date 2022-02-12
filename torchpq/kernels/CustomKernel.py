@@ -1,7 +1,6 @@
 import cupy as cp
 import torch
-
-DEVICE = cp.cuda.Device().id
+from torchpq.kernels import DEVICE
 
 @cp.memoize(for_each_device=True)
 def cunnex(func_name, func_body):

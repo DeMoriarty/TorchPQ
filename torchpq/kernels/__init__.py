@@ -1,3 +1,6 @@
+import cupy as cp
+DEVICE = cp.cuda.Device().id
+
 from .CustomKernel import CustomKernel
 from .CustomKernel import Stream
 
