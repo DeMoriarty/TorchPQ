@@ -33,8 +33,7 @@ index = IVFPQIndex(
   d_vector=d_vector,
   n_subvectors=64,
   n_cells=1024,
-  blocksize=128,
-  init_size=2048,
+  initial_size=2048,
   distance="euclidean",
 )
 
@@ -45,9 +44,9 @@ There are some important parameters that need to be explained:
 - **d_vector**: dimentionality of input vectors. there are 2 constraints on `d_vector`: (1) it needs to be divisible by `n_subvectors`; (2) it needs to be a multiple of 4.*
 - **n_subvectors**: number of subquantizers, essentially this is the byte size of each quantized vector, 64 byte per vector in the above example.**
 - **n_cells**: number of coarse quantizer clusters
-- **init_size**: initial capacity assigned to each voronoi cell of coarse quantizer.
-`n_cells * init_size` is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell will be automatically expanded.
-If you need to add vectors frequently, a larger value for `init_size` is recommended.
+- **initial_size**: initial capacity assigned to each voronoi cell of coarse quantizer.
+`n_cells * initial_size` is the number of vectors that can be stored initially. if any cell has reached its capacity, that cell will be automatically expanded.
+If you need to add vectors frequently, a larger value for `initial_size` is recommended.
 
 Remember that the shape of any tensor that contains data points has to be ```[d_vector, n_data]```.
 
