@@ -82,7 +82,7 @@ class FlatContainer(BaseContainer):
     data = data.to(self.device)
     data = data.reshape(
       self.code_size // self.contiguous_size,
-      self.contiguous_size
+      self.contiguous_size,
       -1,
     ).transpose(1, 2)
 
