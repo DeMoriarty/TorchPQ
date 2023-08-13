@@ -69,10 +69,12 @@ def get_maximum_shared_memory_bytes(device_id=0):
     y = 96
   elif cc == (7, 5):
     y = 64
-  elif cc == (8, 0):
+  elif cc in [(8, 0), (8, 7)]:
     y = 163
-  elif cc == (8, 6):
+  elif cc in [(8, 6), (8, 9)]:
     y = 99
+  elif cc == (9, 0):
+    y = 227
   else:
     y = 0
   return y * 1024
