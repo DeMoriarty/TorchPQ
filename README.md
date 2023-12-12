@@ -73,7 +73,7 @@ It ignores ids that doesn't exist.
 index.n_probe = 32
 n_query = 10000
 queryset = torch.randn(d_vector, n_query, device="cuda:0")
-topk_values, topk_ids = index.topk(queryset, k=100)
+topk_values, topk_ids = index.search(queryset, k=100)
 ```
 - when `distance="inner"`, `topk_values` are **inner product** of queries and topk closest data points.
 - when `distance="euclidean"`, `topk_values` are **negative squared L2 distance** between queries and topk closest data points.
